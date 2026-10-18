@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Multi-source job discovery across global nodes.">
+  <title>tapsubmit</title>
+  <link rel="stylesheet" href="/assets/discovery.css">
+  <script type="module" src="/assets/discovery.js"></script>
+</head>
+<body>
+<main>
+  <header>
+    <a class="brand" href="/" aria-label="TapSubmit">
+      <span>tapsubmit</span>
+      <span class="status-dot"></span>
+    </a>
+    <div class="header-actions">
+      <a href="/download/extension" download="tapsubmit-extension.zip">Extension ↓</a>
+      <button id="setup" type="button">Setup</button>
+    </div>
+  </header>
+
+  <!-- Supported Application Platforms Strip (Visible immediately on entry) -->
+  <section class="platforms-readiness">
+    <div class="readiness-header">
+      <strong>Supported Job Platforms &amp; Application Readiness</strong>
+      <span class="readiness-sub">Connect your accounts to enable automated applications</span>
+    </div>
+    <div class="platforms-grid">
+      <!-- LinkedIn -->
+      <div class="platform-card">
+        <div class="platform-top">
+          <span class="platform-name">LinkedIn Easy Apply</span>
+          <span class="platform-badge badge-auth">Requires Login</span>
+        </div>
+        <p class="platform-desc">Requires active session for 1-click or automated submissions.</p>
+        <div class="platform-action">
+          <a href="https://www.linkedin.com/jobs" target="_blank" rel="noopener noreferrer" class="btn-connect">Connect LinkedIn</a>
+          <span class="platform-status">Via Extension / Tab</span>
+        </div>
+      </div>
+      <!-- Greenhouse -->
+      <div class="platform-card">
+        <div class="platform-top">
+          <span class="platform-name">Greenhouse</span>
+          <span class="platform-badge badge-ready">Direct Form (No Login)</span>
+        </div>
+        <p class="platform-desc">Auto-fills candidate details &amp; submits directly to employer.</p>
+        <span class="platform-status text-ready">Ready for 1-click &amp; auto apply</span>
+      </div>
+      <!-- Lever -->
+      <div class="platform-card">
+        <div class="platform-top">
+          <span class="platform-name">Lever</span>
+          <span class="platform-badge badge-ready">Direct Form (No Login)</span>
+        </div>
+        <p class="platform-desc">Direct employer application pipeline with receipt confirmation.</p>
+        <span class="platform-status text-ready">Ready for 1-click &amp; auto apply</span>
+      </div>
+      <!-- Ashby -->
+      <div class="platform-card">
+        <div class="platform-top">
+          <span class="platform-name">Ashby</span>
+          <span class="platform-badge badge-ready">Direct Form (No Login)</span>
+        </div>
+        <p class="platform-desc">Native integration for tech and AI company career portals.</p>
+        <span class="platform-status text-ready">Ready for 1-click &amp; auto apply</span>
+      </div>
+      <!-- Workable & SmartRecruiters -->
+      <div class="platform-card">
+        <div class="platform-top">
+          <span class="platform-name">Workable &amp; SmartRecr.</span>
+          <span class="platform-badge badge-ready">Direct Form (No Login)</span>
+        </div>
+        <p class="platform-desc">Public career boards; no credential or account required.</p>
+        <span class="platform-status text-ready">Ready for 1-click &amp; auto apply</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Captcha / Alert -->
+  <div id="captcha-alert" class="alert-box alert-captcha" hidden>
+    <div>
+      <strong id="alert-title">Action Required: LinkedIn Verification</strong>
+      <p id="alert-msg" style="margin: 4px 0 0;">LinkedIn checkpoint or CAPTCHA detected. Complete verification in browser or activate via extension to continue.</p>
+    </div>
+    <div style="display:flex; gap:8px;">
+      <a id="alert-link" href="https://www.linkedin.com/jobs" target="_blank" rel="noopener noreferrer" class="alert-btn">Open LinkedIn ↗</a>
+    </div>
+  </div>
+
+  <!-- Search & CV Upload -->
+  <section class="search-container">
+    <label class="upload-zone" for="resume">
+      <div class="upload-left">
+        <span class="upload-icon">↑</span>
+        <div>
+          <div id="resume-label" class="upload-title">Drop your CV here or click to browse</div>
+          <div id="resume-note" class="upload-desc">PDF, DOCX, TXT · Parsed 100% locally on your device</div>
+        </div>
+      </div>
+      <span class="upload-btn">Browse CV</span>
+      <input id="resume" type="file" accept=".pdf,.docx,.txt" hidden>
+    </label>
+
+    <div class="query-details">
+      <form id="search-form" class="query-input-wrap">
+        <input id="query" autocomplete="off" placeholder="Role or target keywords (e.g. Senior Backend Engineer, AI Engineer)">
+        <select id="country" class="country-select" aria-label="Country"></select>
+        <label class="remote-check">
+          <input id="remote" type="checkbox"> Remote
+        </label>
+        <button id="search" class="btn-primary" type="submit">
+          <span>Search Nodes</span> <span>→</span>
+        </button>
+      </form>
+      <div id="roles" class="roles-bar" hidden></div>
+      <div id="error" class="error" role="alert" style="color:var(--crimson); font-size:12px; margin-top:6px;" hidden></div>
+    </div>
+  </section>
+
+  <!-- Live Results: Discrete Horizontal Node Sections -->
+  <section id="results-section" class="results-section">
+    <div class="results-header">
+      <div>
+        <span class="results-count"><span id="result-count">0</span> Opportunities Found</span>
+      </div>
+      <div id="summary" class="results-summary">Ready</div>
+    </div>
+
+    <!-- Container for each node section: jobs from each site appear directly under that node -->
+    <div id="nodes-stream" class="nodes-stream"></div>
+
+    <button id="more" style="display:block; margin:24px auto 0; padding:8px 18px; border:1px solid var(--border); border-radius:6px; background:#fff; color:var(--text); font-size:12px; font-weight:600;" type="button" hidden>Load more</button>
+  </section>
+
+  <footer>
+    <div>tapsubmit · discrete node architecture</div>
+    <div><a href="/download/extension">Chrome &amp; Edge Extension</a></div>
+  </footer>
+
+  <dialog id="setup-dialog">
+    <button class="dialog-close" type="button" aria-label="Close">×</button>
+    <h2>Browser Extension Preview</h2>
+    <p style="font-size:12px; color:var(--text-muted);">Run searches directly from your browser with your active sessions.</p>
+    <ol>
+      <li>Download and extract <strong>tapsubmit-extension.zip</strong>.</li>
+      <li>Open <code>chrome://extensions</code> or <code>edge://extensions</code>.</li>
+      <li>Enable <strong>Developer mode</strong> and click <strong>Load unpacked</strong>.</li>
+      <li>Select the extracted folder to enable direct searches on LinkedIn and ATS portals.</li>
+    </ol>
+  </dialog>
+</main>
+</body>
+</html>

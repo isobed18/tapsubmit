@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ApplyBurst · Find jobs</title><link rel="stylesheet" href="/applyburst/assets/public-demo.css"><script type="module" src="/applyburst/assets/public-demo.js"></script></head>
+<body><main>
+<header><a href="/applyburst/">applyburst<span>●</span></a><span>Job discovery demo</span></header>
+<h1>Your CV.<br>Your next opportunities.</h1>
+<p>Upload your CV. We suggest searches and find relevant job pages across your selected sources.</p>
+<label class="upload">Choose your CV<input id="resume" type="file" accept=".pdf,.docx,.txt" hidden></label>
+<p class="small">PDF, DOCX or TXT · up to 12 MB. For PDF, use a copy with selectable text.</p>
+<p class="privacy">No login. Your CV stays in your browser. Only detected role/skill labels and your region are sent to search. This demo finds jobs; the local app handles applications.</p>
+<details class="source-picker"><summary id="source-summary">Sources</summary><div id="sources" class="sources"></div></details>
+<section id="preferences" hidden><div id="roles" class="chips"></div><div class="controls"><label>Search region<select id="country"></select></label><label class="check"><input id="remote" type="checkbox"> Remote only</label><button id="search-again" type="button" hidden>Search selected sources</button></div><p id="queries" class="small"></p></section>
+<p id="status" role="status"></p><p id="error" role="alert"></p>
+<details id="progress"><summary>Source progress</summary><div id="source-progress"></div></details>
+<section id="results" aria-live="polite"></section><button id="more" type="button" hidden>Search deeper</button>
+<footer>Public job sources · saved lists reused · no generative LLM or GPU <a href="https://github.com/isobed18/applyburst" target="_blank" rel="noreferrer">Source ↗</a></footer>
+</main></body></html>

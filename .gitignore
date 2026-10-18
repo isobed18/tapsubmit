@@ -1,0 +1,17 @@
+.venv/
+.venv-retrieval/
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.data/
+artifacts/
+node_modules/
+*.sqlite*
+playwright-report/
+*.egg-info/
+build/
+!/demo/build/
+dist/
+
+public-pool/

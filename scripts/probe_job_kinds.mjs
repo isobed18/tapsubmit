@@ -1,0 +1,12 @@
+// Bounded probe: can the encoder separate "kinds" of postings (annotation gigs, teaching/academic) from real roles?
+import {embed,dot} from '../web/lib/semantic.mjs';
+const KINDS={
+ annotation:['Freelance AI training contractor: write and evaluate responses to improve AI models, paid hourly','AI data annotation and labeling tasks, remote contract work','Expert for AI model evaluation and RLHF coding tasks, hourly pay'],
+ teaching:['Teacher at a school','University faculty position: lecturer or professor','Tutor or instructor teaching students','Mentor and trainer for an online course'],
+};
+const jobs=[['Software Engineer (AI Training)','Alignerr','Help train AI models by writing and reviewing code. Flexible hours, paid per task.'],['AI Model Debugging Expert | $10/hr Remote','Crossing Hurdles','Evaluate AI model outputs and identify errors. $10/hr.'],['Data Scientist | Remote','Crossing Hurdles','Contract role to label and evaluate data science answers for AI labs. Hourly pay.'],['Software Engineer AI Coding Tasks','Askable','Complete coding tasks to train AI systems.'],['Tenure-track Faculty Positions for All Ranks in Artificial Intelligence','Koç University','Teaching and research positions in AI.'],['Claude AI Engineer Technical Mentor - Independent Contractor','Udacity','Mentor students in our nanodegree.'],['Machine Learning Engineer','Cimri','Build ranking models in production with PyTorch.'],['AI Engineer – New Graduate','TEB Arf','Develop LLM applications for banking.'],['Computer Vision Engineer','Rapsodo','Develop vision algorithms for sports tracking.'],['Data Scientist','Trendyol Group','Build recommendation and pricing models.'],['Matematik Öğretmeni','Özel Okul','Lise matematik öğretmeni aranıyor.'],['Junior Data Scientist','Xperteez','Analyze data and build ML models.']];
+const anchors=Object.fromEntries(await Promise.all(Object.entries(KINDS).map(async([k,v])=>[k,await embed(v)])));
+const roles=await embed(['Machine Learning Engineer','AI Engineer','Teacher']);
+for(const [title,company,desc] of jobs){const [t]=await embed([title]),[d]=await embed([title+' · '+company+' · '+desc]);
+ const s=k=>Math.max(...anchors[k].map(a=>Math.max(dot(a,t),dot(a,d))));console.log(title.slice(0,58).padEnd(60),'annot',s('annotation').toFixed(2),'teach',s('teaching').toFixed(2));}
+for(const [i,r] of ['ML Engineer plan','AI Engineer plan','Teacher plan'].entries())console.log(r,'annot',Math.max(...anchors.annotation.map(a=>dot(a,roles[i]))).toFixed(2),'teach',Math.max(...anchors.teaching.map(a=>dot(a,roles[i]))).toFixed(2));

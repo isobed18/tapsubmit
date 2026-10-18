@@ -1,0 +1,169 @@
+[
+  {
+    "id": "ashby:langchain",
+    "kind": "ats",
+    "provider": "ashby",
+    "board": "langchain",
+    "company": "LangChain",
+    "ttl_seconds": 900,
+    "evidence": "https://www.langchain.com/careers"
+  },
+  {
+    "id": "greenhouse:anthropic",
+    "kind": "ats",
+    "provider": "greenhouse",
+    "board": "anthropic",
+    "company": "Anthropic",
+    "ttl_seconds": 900,
+    "evidence": "https://www.anthropic.com/careers/jobs"
+  },
+  {
+    "id": "personio:appliedai",
+    "kind": "ats",
+    "provider": "personio",
+    "board": "appliedai.jobs.personio.de",
+    "company": "appliedAI",
+    "ttl_seconds": 21600,
+    "evidence": "https://appliedai.jobs.personio.de/"
+  },
+  {
+    "id": "personio:justaddai",
+    "kind": "ats",
+    "provider": "personio",
+    "board": "justaddai.jobs.personio.de",
+    "company": "JAAI Group",
+    "ttl_seconds": 21600,
+    "evidence": "https://justaddai.jobs.personio.de/"
+  },
+  {
+    "id": "remotive:all",
+    "kind": "aggregator",
+    "provider": "remotive",
+    "board": "all",
+    "url": "https://remotive.com/api/remote-jobs",
+    "ttl_seconds": 21600,
+    "provider_delay_hours": 24,
+    "evidence": "https://github.com/remotive-com/remote-jobs-api"
+  },
+  {
+    "id": "arbeitnow:recent",
+    "kind": "aggregator",
+    "provider": "arbeitnow",
+    "board": "recent",
+    "url": "https://www.arbeitnow.com/api/job-board-api",
+    "max_pages": 2,
+    "ttl_seconds": 1800,
+    "evidence": "https://www.arbeitnow.com/api/job-board-api"
+  },
+  {
+    "id": "wwr:programming",
+    "kind": "rss",
+    "provider": "wwr",
+    "board": "programming",
+    "url": "https://weworkremotely.com/categories/remote-programming-jobs.rss",
+    "ttl_seconds": 1800,
+    "evidence": "https://weworkremotely.com/remote-job-rss-feed"
+  },
+  {
+    "id": "smartrecruiters:BoschGroup-ai",
+    "kind": "ats",
+    "provider": "smartrecruiters",
+    "board": "BoschGroup",
+    "company": "Bosch Group",
+    "query": "AI",
+    "max_jobs": 40,
+    "ttl_seconds": 1800,
+    "evidence": "https://careers.smartrecruiters.com/BoschGroup"
+  },
+  {
+    "id": "python:jobs",
+    "kind": "html",
+    "provider": "python",
+    "board": "jobs",
+    "url": "https://www.python.org/jobs/",
+    "max_jobs": 20,
+    "ttl_seconds": 3600,
+    "evidence": "https://www.python.org/jobs/"
+  },
+  {
+    "id": "greenhouse:datadog",
+    "kind": "ats",
+    "provider": "greenhouse",
+    "board": "datadog",
+    "company": "datadog",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "greenhouse:duolingo",
+    "kind": "ats",
+    "provider": "greenhouse",
+    "board": "duolingo",
+    "company": "duolingo",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "greenhouse:figma",
+    "kind": "ats",
+    "provider": "greenhouse",
+    "board": "figma",
+    "company": "figma",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "greenhouse:gitlab",
+    "kind": "ats",
+    "provider": "greenhouse",
+    "board": "gitlab",
+    "company": "gitlab",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "ashby:notion",
+    "kind": "ats",
+    "provider": "ashby",
+    "board": "notion",
+    "company": "notion",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "ashby:linear",
+    "kind": "ats",
+    "provider": "ashby",
+    "board": "linear",
+    "company": "linear",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "lever:mistral",
+    "kind": "ats",
+    "provider": "lever",
+    "board": "mistral",
+    "company": "mistral",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "lever:spotify",
+    "kind": "ats",
+    "provider": "lever",
+    "board": "spotify",
+    "company": "spotify",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  },
+  {
+    "id": "workable:wingieenuygun",
+    "kind": "ats",
+    "provider": "workable",
+    "board": "wingieenuygun",
+    "company": "Wingie Enuygun",
+    "ttl_seconds": 1800,
+    "evidence": "reports/form-question-audit.json"
+  }
+]

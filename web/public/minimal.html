@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#faf9f6">
+<title>TapSubmit — Your workspace</title>
+<link rel="stylesheet" href="/applyburst/assets/minimal.css">
+<link rel="stylesheet" href="/applyburst/assets/tom-select.css">
+<script type="module" src="/applyburst/assets/minimal.js"></script>
+</head>
+<body>
+<main aria-busy="true" inert>
+<header>
+ <a class="brand" href="/applyburst/" aria-label="TapSubmit workspace">tapsubmit<span aria-hidden="true">↗</span></a>
+ <nav>
+  <button id="saved-nav" class="nav-link" type="button">Saved <b id="nav-saved-count">0</b></button>
+  <button id="history-button" class="nav-link" type="button">History</button>
+  <button id="open-settings" class="nav-link" type="button">Settings</button>
+  <button id="auth-button" class="nav-link" type="button">Loading…</button>
+ </nav>
+</header>
+
+<section class="hero">
+ <span class="eyebrow">YOUR LOCAL WORKSPACE</span>
+ <h1>Your next move,<br><em>one tap away.</em></h1>
+ <p class="intro">Your CV, sign-ins and answers stay on this computer.</p>
+
+ <label class="upload" id="resume-button" for="resume">
+  <span class="upload-icon" aria-hidden="true">↑</span>
+  <span class="upload-copy"><strong id="resume-name">Drop your CV here</strong><small id="resume-note">or choose a file · PDF, DOCX, TXT</small></span>
+  <span class="upload-action" id="resume-action">Choose file</span>
+  <input id="resume" type="file" accept=".pdf,.docx,.txt" hidden>
+ </label>
+
+ <div class="search-input">
+  <span aria-hidden="true">⌕</span>
+  <input id="query" aria-label="Optional job title or keyword" maxlength="120" autocomplete="off" placeholder="Or add a role, like AI Engineer">
+  <button id="add-query-btn" type="button">Add role</button>
+  <button id="start" type="button">Start <span aria-hidden="true">↗</span></button>
+  <button id="pause" class="ghost" type="button" hidden>Pause</button>
+  <button id="stop" class="ghost" type="button" hidden>Stop</button>
+ </div>
+
+ <div class="filter-row">
+  <label class="country"><span class="sr-only">Work preference</span><select id="work-mode" aria-label="Work preference"><option value="">Where can you work?</option><option value="remote_only">Remote only</option><option value="local_and_remote">Selected cities + remote</option><option value="local_only">Selected cities only</option><option value="anywhere">Any location</option></select></label>
+  <label id="country-wrap" class="country" hidden><span id="country-label">Country</span><select id="country" aria-label="Search country"></select></label>
+  <div id="city-picker-wrap" class="city-picker-wrap" hidden><label class="sr-only" for="city-picker">Preferred cities</label><select id="city-picker" aria-label="Preferred cities" multiple></select></div>
+  <input id="city-choice" type="hidden">
+  <button id="expand-search" class="text-button" type="button" hidden>Search deeper</button>
+  <button id="clear-results" class="text-button" type="button" title="Clear the results on this screen">Clear results</button>
+  <button id="sources-link" class="text-button push" type="button">Sources &amp; limits <span aria-hidden="true">⌄</span></button>
+ </div>
+
+ <div id="plan-row" class="roles-row" hidden><span class="roles-label">Searching for</span><div id="plan-chips" class="roles" aria-label="Selected search roles"></div></div>
+ <div id="search-status" class="search-status" role="status" aria-live="polite" data-state="ready"><span class="status-dot" aria-hidden="true"></span><span id="search-status-text">Ready · press Start to search.</span></div>
+ <div id="connection-status" class="connection-status" role="status" hidden><span>Connection interrupted. Reconnecting to check your search; nothing is restarted automatically.</span><button id="retry-connection" type="button" class="text-button">Retry now</button></div>
+ <p class="privacy"><span aria-hidden="true">◈</span> Runs on this computer. Nothing is sent outside the mode you choose.</p>
+ <p id="error" class="error" role="alert"></p>
+</section>
+
+<div id="captcha-alert" class="alert-box" hidden>
+ <div>
+  <strong id="alert-title">Action required: LinkedIn verification</strong>
+  <p id="alert-msg" class="alert-msg">LinkedIn asked for a verification. Complete it in your browser, then continue.</p>
+ </div>
+ <a id="alert-link" href="https://www.linkedin.com/jobs" target="_blank" rel="noopener noreferrer" class="alert-btn">Open LinkedIn ↗</a>
+</div>
+
+<section class="workspace">
+ <fieldset id="profiles" class="profiles"><legend class="sr-only">Application mode</legend></fieldset>
+ <label class="check full-auto-option" hidden><input id="full-auto-toggle" type="checkbox">Also use values a website prefilled (full auto)</label>
+ <p id="profile-note" class="note"></p>
+</section>
+
+<section id="live" class="results-section" hidden>
+ <div class="results-heading">
+  <div>
+   <span class="eyebrow">YOUR OPPORTUNITIES</span>
+   <h2><span id="run-title">Ready</span><span id="run-indicator" class="busy" aria-hidden="true" hidden></span></h2>
+   <p id="run-sub" class="summary"></p>
+  </div>
+ </div>
+ <div id="counters" class="counters"></div>
+ <details id="search-details" class="search-details"><summary>Search details</summary><p id="search-filters" class="fine"></p><p id="search-exclusions" class="fine"></p><div id="source-details"></div></details>
+ <div id="sources" class="progress" hidden></div>
+ <div id="stream" class="stream" hidden></div>
+ <div class="live-stream-wrap">
+  <div id="nodes-stream" class="nodes-stream"></div>
+  <button id="back-live" class="back-live" type="button" hidden>New jobs</button>
+ </div>
+ <p id="metrics" class="metrics"></p>
+</section>
+
+<section id="lists" class="lists" hidden>
+ <div class="tabs" role="tablist">
+  <button role="tab" type="button" data-tab="completed" aria-selected="true">Applied <b id="n-completed">0</b></button>
+  <button role="tab" type="button" data-tab="needs" aria-selected="false">Needs review <b id="n-needs">0</b></button>
+  <button role="tab" type="button" data-tab="saved" aria-selected="false">Saved <b id="n-saved">0</b></button>
+  <button role="tab" type="button" data-tab="other" aria-selected="false">Matches <b id="n-other">0</b></button>
+  <button role="tab" type="button" data-tab="skipped" aria-selected="false">Skipped <b id="n-skipped">0</b></button>
+ </div>
+ <div id="tab-completed" class="tab-panel" role="tabpanel"></div>
+ <div id="tab-needs" class="tab-panel" role="tabpanel" hidden></div>
+ <div id="tab-saved" class="tab-panel" role="tabpanel" hidden></div>
+ <div id="tab-other" class="tab-panel" role="tabpanel" hidden></div>
+ <div id="tab-skipped" class="tab-panel" role="tabpanel" hidden></div>
+</section>
+
+<footer>
+ <div><strong>tapsubmit</strong><span>Your workspace. On your computer.</span></div>
+ <div class="footer-links"><a href="https://tapsubmit.com/#app-panel" target="_blank" rel="noopener noreferrer">Source &amp; downloads ↗</a></div>
+</footer>
+</main>
+
+<dialog id="auth-dialog">
+ <div class="dialog-head"><strong id="auth-title">Sign in or create account</strong><button class="dialog-close" type="button" data-close aria-label="Close">×</button></div>
+ <p id="auth-subtitle" class="fine">Sign in to save jobs, connect accounts, and submit applications.</p>
+ <p class="trust-note">This account exists only on this computer. TapSubmit has no server copy of your CV, passwords, job-site sign-ins or answers; everything runs here. Don't want to trust us? The code is open source: <a href="https://tapsubmit.com/#app-panel" target="_blank" rel="noopener noreferrer">read it or build it yourself ↗</a></p>
+ <div class="auth-tabs">
+  <button type="button" id="tab-login" class="tab-link active">Sign in</button>
+  <button type="button" id="tab-register" class="tab-link">Create account</button>
+ </div>
+ <form id="auth-form">
+  <div class="grid">
+   <label>Username<input id="auth-username" name="username" autocomplete="username" required minlength="3" maxlength="80"></label>
+   <label>Password<input id="auth-password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="200"></label>
+  </div>
+  <p id="auth-error" class="error" role="alert"></p>
+  <div class="dialog-actions"><button class="secondary" type="button" data-close>Cancel</button><button id="auth-submit" class="primary" type="submit">Sign in</button></div>
+ </form>
+</dialog>
+
+<dialog id="settings" class="wide">
+ <div class="dialog-head"><strong>Settings</strong><button class="dialog-close" type="button" data-close aria-label="Close">×</button></div>
+ <div class="settings-body">
+  <section>
+   <h3>Search</h3>
+   <fieldset id="sites" class="checks"><legend>Job sources</legend></fieldset>
+   <fieldset id="job-languages" class="checks"><legend>Languages you can work in</legend><p class="fine">Jobs written in, or explicitly requiring, another language are hidden. Pre-selected from your CV; uncheck all to show every language.</p></fieldset>
+   <div class="grid">
+    <label>Posted<select id="hours"><option value="24">Past day</option><option value="72">Past 3 days</option><option value="168" selected>Past week</option><option value="720">Past month</option></select></label>
+    <label>Jobs per source<select id="limit"><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option></select></label>
+   </div>
+   <input id="location" type="hidden"><input id="remote" type="checkbox" hidden>
+   <label class="check"><input id="fresh" type="checkbox">Always refresh</label>
+   <label class="check"><input id="signed" type="checkbox">Search LinkedIn with my connected account</label>
+   <label class="check"><input id="easy" type="checkbox">LinkedIn: Easy Apply jobs only</label>
+  </section>
+  <section>
+   <h3>Automatic applications</h3>
+   <fieldset id="targets" class="checks"><legend>Forms that may be submitted automatically</legend></fieldset>
+   <div class="grid">
+    <label>Applications per run<input id="run-cap" type="number" min="1" max="50" value="10"></label>
+    <label>Applications per day<input id="daily-cap" type="number" min="1" max="200"></label>
+    <label>Forms in parallel<select id="concurrency"><option>1</option><option>2</option><option>3</option><option>4</option></select></label>
+    <label>LinkedIn pause between jobs (s)<input id="linkedin-pace" type="number" min="1" max="120"></label>
+   </div>
+   <label class="check"><input id="windows" type="checkbox">Show browser windows while applying</label>
+   <div id="consents"></div>
+   <button id="save-apply" class="secondary" type="button">Save</button>
+  </section>
+  <section>
+   <h3>Your details</h3>
+   <p class="fine">Forms receive exactly these values; nothing is invented.</p>
+   <div id="facts" class="grid"></div>
+   <button id="save-facts" class="secondary" type="button">Save details</button>
+  </section>
+  <section>
+   <h3>Screening answers</h3>
+   <p class="fine">Used only when a form asks the same question.</p>
+   <div class="screening-grid">
+    <label class="field">Work authorization
+     <select id="pref-auth"><option value="" selected>Ask when needed</option><option value="yes">Authorized in search country</option><option value="no">Not authorized in search country</option></select>
+    </label>
+    <label class="field">Visa sponsorship
+     <select id="pref-visa"><option value="" selected>Ask when needed</option><option value="no">No sponsorship in search country</option><option value="yes">Sponsorship in search country</option></select>
+    </label>
+    <label class="field">Notice period
+     <select id="pref-notice"><option value="" selected>Ask when needed</option><option value="immediate">Immediately available</option><option value="2weeks">2 weeks</option><option value="1month">1 month</option><option value="3months">3 months</option></select>
+    </label>
+    <label class="field">Seniority
+     <select id="pref-level"><option value="auto" selected>Detect from CV</option><option value="early">Junior / early career</option><option value="mid">Mid-level</option><option value="senior">Senior / lead</option></select>
+    </label>
+   </div>
+  </section>
+  <section>
+   <h3>Saved answers</h3>
+   <p class="fine">Reused only for questions with the same meaning. Unknown questions always wait for you.</p>
+   <div id="saved-facts" class="grid"></div>
+   <div id="answers"></div>
+  </section>
+  <section>
+   <h3>Connected accounts</h3>
+   <div id="accounts"></div>
+  </section>
+  <section>
+   <h3>Shared job pool · optional</h3>
+   <p class="fine">TapSubmit keeps a shared database of public job postings collected from company career sites. Both options are off unless you turn them on.</p>
+   <label class="check"><input id="pool-share" type="checkbox">Add jobs my searches find to the shared pool</label>
+   <p class="fine">Only public job details are sent: title, company, location, work type and the job link. Never your CV, name, contact details, answers or job-site sign-ins.</p>
+   <div class="account-row row-between">
+    <div><strong id="pool-status-label">Shared pool</strong><small id="pool-status-note">Checking…</small></div>
+    <button id="pool-download" class="secondary small" type="button">Download &amp; use for my searches</button>
+   </div>
+   <label class="check"><input id="pool-use" type="checkbox">Search the downloaded pool too</label>
+   <span id="ext-status-label" hidden></span><span id="ext-status-note" hidden></span>
+  </section>
+  <section>
+   <h3>Optional text drafts</h3>
+   <p class="fine">Drafts run on this computer only when requested for a job. Review before saving.</p>
+   <p id="llm-status" class="note" role="status">Checking Ollama…</p>
+   <label class="check"><input id="llm-enabled" type="checkbox">Enable local drafts</label>
+   <label>Model<select id="llm-model"><option value="qwen2.5:3b">Qwen2.5 3B · optional download</option></select></label>
+   <div class="settings-actions"><button id="llm-save" class="secondary small" type="button">Save model choice</button><button id="llm-install" class="secondary small" type="button">Download selected model</button><a href="https://ollama.com/download" target="_blank" rel="noopener noreferrer">Get Ollama ↗</a></div>
+   <progress id="llm-progress" max="100" value="0" hidden aria-label="Model download progress"></progress>
+  </section>
+  <section>
+   <h3>Application notes</h3>
+   <p class="fine">Describe your city, acceptable work locations, remote/hybrid preference, expected salary (currency, period, gross/net), weekly hours, and when you can start. Add relocation, work authorization or visa sponsorship only if you know them.</p>
+   <textarea id="preference-message" rows="4" maxlength="8000" placeholder="For example: I live in Ankara. Remote only. Expected salary: 60,000 TRY/month net. Available 30 hours/week; can start on 2026-11-01."></textarea>
+   <button id="extract-preferences" class="secondary small" type="button">Fill settings from this message</button>
+   <p id="preference-message-status" class="note" role="status"></p><div id="preference-preview"></div>
+   <label>Anything else your applications should know<textarea id="candidate-notes" maxlength="8000" rows="4" placeholder="Facts a draft may use. Leave blank to use your CV and saved preferences."></textarea></label>
+   <button id="save-notes" class="secondary small" type="button">Save</button>
+  </section>
+  <section>
+   <h3>Telegram · optional</h3>
+   <p class="fine">Create a bot with <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer">@BotFather</a>. Its token stays on this computer. Connect only if you want questions, your replies and drafts sent through Telegram.</p>
+   <p id="telegram-status" class="note" role="status">Not connected</p>
+   <label>Bot token<input id="telegram-token" type="password" autocomplete="off" placeholder="Paste your BotFather token"></label>
+   <label class="check"><input id="telegram-enabled" type="checkbox">Allow questions and drafts through Telegram</label>
+   <label class="check"><input id="telegram-notifications" type="checkbox" checked>Notify me after confirmed applications</label>
+   <div class="settings-actions"><button id="telegram-save" class="secondary small" type="button">Save &amp; connect</button><button id="telegram-disconnect" class="text-button" type="button">Disconnect</button><a id="telegram-pair" target="_blank" rel="noopener noreferrer" hidden>Pair my private chat ↗</a></div>
+  </section>
+  <section>
+   <h3>Account</h3>
+   <p class="fine">Signed in as <strong id="account-username"></strong>.</p>
+   <form id="password-form">
+    <div class="grid">
+     <label>Current password<input name="current_password" type="password" autocomplete="current-password" required></label>
+     <label>New password<input name="new_password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required></label>
+     <label>Confirm new password<input name="confirm_password" type="password" autocomplete="new-password" minlength="8" maxlength="200" required></label>
+    </div>
+    <p id="password-error" class="error" role="alert"></p>
+    <button class="secondary" type="submit">Change password</button>
+   </form>
+  </section>
+ </div>
+</dialog>
+
+<dialog id="live-browser" class="wide">
+ <div class="dialog-head"><strong id="live-browser-title">Connect account</strong><button id="live-browser-close" class="dialog-close" type="button" aria-label="Close">×</button></div>
+ <p id="live-browser-note" class="fine">Complete sign-in or verification below. Close when finished.</p>
+ <div class="live-frame-wrap"><img id="live-frame" alt="Interactive browser view"></div>
+ <div class="live-controls row-gap">
+  <input id="live-type" placeholder="Type here and press Send">
+  <button id="live-send" class="secondary" type="button">Send text</button>
+  <button id="live-done" class="primary small" type="button">Done</button>
+ </div>
+</dialog>
+
+<dialog id="consent">
+ <div class="dialog-head"><strong id="consent-title">Enable automatic applications</strong><button class="dialog-close" type="button" data-close aria-label="Close">×</button></div>
+ <div id="consent-body"></div>
+ <div class="dialog-actions"><button class="secondary" type="button" data-close>Cancel</button><button id="consent-allow" class="primary" type="button">Enable</button></div>
+</dialog>
+
+<dialog id="review" class="wide">
+ <div class="dialog-head"><strong id="review-title">Review before sending</strong><button class="dialog-close" type="button" data-close aria-label="Close">×</button></div>
+ <div id="review-body"></div>
+ <div class="dialog-actions"><button class="secondary" type="button" data-close>Not now</button><button id="review-send" class="primary" type="button">Send</button></div>
+</dialog>
+
+<dialog id="details">
+ <div class="dialog-head"><strong id="dialog-title">Details</strong><button class="dialog-close" type="button" data-close aria-label="Close">×</button></div>
+ <div id="dialog-body"></div>
+</dialog>
+
+<div id="toast" role="status" hidden></div>
+</body>
+</html>

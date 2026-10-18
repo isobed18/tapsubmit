@@ -1,0 +1,11 @@
+# Public job catalog snapshot
+
+The continuous harvester writes normalized postings into the local app's existing pool. SQLite FTS5 indexes active postings incrementally; another vector service is unnecessary for this baseline. Exact application URLs identify duplicates while source postings retain provenance. URL handoffs discovered by the browser update pool membership.
+
+`node --no-warnings scripts/export_job_catalog.mjs --description-chars=2000` creates ignored `.data/public-catalog/<timestamp>/` gzip JSONL shards and a checksum manifest. It exports a read-transaction snapshot of public posting metadata only. Candidate profiles, resumes, answers, session cookies, credentials and application records are not copied. Native candidate/authentication workflow URLs are excluded. Description excerpts may be truncated; these files are a search baseline, not complete application schemas.
+
+The 18 October snapshot contains 359,993 postings in 15 shards, 122,556,416 compressed bytes. All records and checksums were read back. `reports/catalog-source-comparison.json` contains the current pool/index counts, measured FTS queries, recorded discovery coverage and exact destination overlap. External-source overlap explicitly excludes the company-board search itself. Unresolved board links make that overlap a lower bound, not a duplicate-detection accuracy score. Broad keyword totals are retrieval candidates, not verified CV matches.
+
+The private SQLite database has **not** been uploaded. The Railway demo and its trial volume are unchanged. A later server import should consume only these whitelisted public records, rebuild its own search index, upsert by stable identity, and preserve source/observation timestamps. A full local database copy is not an acceptable import mechanism. The manifest's local outbox cursor is a snapshot marker; a future incremental protocol must also deliver closures/deletions and must distinguish partial source reads from complete snapshots. Do not infer that an omitted job has closed.
+
+The catalog includes Workday and BambooHR discovery even though their application adapters are not implemented. Search coverage and automatic submission coverage are different measurements. Expired, blocked, unknown and unanswered forms must remain explicit review/skip outcomes.

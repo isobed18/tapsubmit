@@ -1,0 +1,21 @@
+[
+ {"id":"salary_statement","label":"Salary expectations (including currency and period)","kind":"text","patterns":["(?:what (?:are|is) )?(?:your )?(?:expected|desired) (?:salary|compensation)(?: expectations)?","(?:what are )?(?:your )?salary expectations","maas beklentiniz(?: nedir)?"]},
+ {"id":"weekly_hours","label":"Available hours per week","kind":"number","min":0,"max":168,"unit":"hours/week","patterns":["(?:how many |maximum |available |your )?(?:working )?hours (?:per|a|each) week(?: (?:can|could|are) you (?:work|commit|available(?: to work)?))?","how many hours (?:can|could) you (?:work|commit)(?: to (?:this role|work))? (?:per|a|each) week","haftada kac saat (?:calisabilirsiniz|ayirabilirsiniz|calisabilirsin|ayirabilirsin)"]},
+ {"id":"notice_period","label":"Notice period (use the wording you approve)","kind":"text","patterns":["(?:what is )?(?:your )?(?:current )?notice period(?: \\([a-z0-9 /,]+\\))?","how much notice (?:do you need|is required)(?: at your current employer)?","ihbar sureniz(?: nedir)?"]},
+ {"id":"earliest_start_date","label":"Earliest start date","kind":"date","patterns":["(?:(?:what|when) is )?(?:your )?(?:earliest |available )?start date","when (?:can you|could you|are you available to|is the earliest you (?:can|could|would want to)) start(?: (?:working|work|with us|working with us))?","ne zaman ise baslayabilirsiniz"]},
+ {"id":"portfolio_url","label":"Portfolio URL","kind":"url","patterns":["(?:your )?portfolio(?: (?:url|link|website))?","please share your portfolio(?: (?:url|link))?"]},
+ {"id":"website","label":"Personal website","kind":"url","patterns":["(?:your |personal |other )?website(?: (?:url|link))?","personal website or blog"]},
+ {"id":"current_company","label":"Current company","kind":"text","patterns":["(?:your )?current (?:company|employer)"]},
+ {"id":"current_title","label":"Current job title","kind":"text","patterns":["(?:your )?(?:current|most recent) (?:job )?title","mevcut (?:pozisyonunuz|unvaniniz)"]},
+ {"id":"preferred_name","label":"Preferred first name","kind":"text","patterns":["preferred first name","what's the name you'd prefer us to use throughout the interview process"]},
+ {"id":"years_experience","label":"Years of professional experience","kind":"number","min":0,"max":60,"unit":"years","patterns":["(?:how many |total |overall )?years of (?:professional |relevant |work |industry |full[- ]time )?experience(?: do you have)?","experience in years","kac yillik (?:is |mesleki )?deneyiminiz var"]},
+ {"id":"relocation","label":"Willing to relocate","kind":"choice","patterns":["(?:are you )?(?:willing|open) to (?:relocate|relocation)(?: (?:for this role|if required))?","can you relocate","tasinmaya (?:hazir|uygun) misiniz"]},
+ {"id":"education","label":"Highest education level","kind":"text","patterns":["(?:what is your )?(?:highest )?(?:level of )?education","degree","egitim (?:durumu|seviyesi)"]},
+ {"id":"university","label":"University or school","kind":"text","patterns":["university(?: or (?:college|school))?(?: name)?","school or university","college or university","universite"]},
+ {"id":"graduation_year","label":"Graduation year","kind":"number","min":1950,"max":2035,"patterns":["(?:expected )?graduation year","year of graduation","mezuniyet yili"]},
+ {"id":"expected_graduation","label":"Expected graduation (year-month)","kind":"text","patterns":["(?:expected |anticipated )?graduation date","when (?:do|will) you graduate","(?:what is your )?expected (?:date of )?graduation","beklenen mezuniyet tarihi(?:niz)?","mezuniyet tarihi(?:niz)?"]},
+ {"id":"employment_type","label":"Employment types you accept","kind":"text","patterns":["(?:what |which )?(?:type of |kind of )?(?:employment|job|position|work) (?:type|types)(?: are you (?:looking for|interested in|seeking))?","(?:are you (?:looking|interested) (?:for|in) )?full.time or part.time(?: (?:employment|work|role|position))?","(?:desired|preferred) (?:employment|job) type","calisma sekli(?: tercihiniz)?"]},
+ {"id":"how_heard","label":"How did you hear about us","kind":"text","patterns":["how did you hear about (?:us|this (?:role|job|position))","where did you hear about us","referral source","bizi nereden duydunuz"]},
+ {"id":"pronouns","label":"Preferred pronouns","kind":"text","patterns":["(?:preferred )?pronouns"]}
+]
+

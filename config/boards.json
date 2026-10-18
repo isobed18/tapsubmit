@@ -1,0 +1,11 @@
+[
+  {"provider":"greenhouse","name":"stripe","tags":["international"],"evidence":"https://stripe.com/jobs"},
+  {"provider":"greenhouse","name":"cloudflare","tags":["international"],"evidence":"https://www.cloudflare.com/careers/jobs/"},
+  {"provider":"lever","name":"palantir","tags":["international"],"evidence":"https://jobs.lever.co/palantir"},
+  {"provider":"ashby","name":"ashby","tags":["international"],"evidence":"https://jobs.ashbyhq.com/ashby"},
+  {"provider":"ashby","name":"ramp","tags":["international"],"evidence":"https://jobs.ashbyhq.com/ramp"},
+  {"provider":"lever","name":"trendyol","tags":["turkey"],"evidence":"https://careers.trendyol.com/join-us"},
+  {"provider":"lever","name":"insiderone","tags":["turkey"],"evidence":"https://jobs.lever.co/insiderone"},
+  {"provider":"lever","name":"peakgames","tags":["turkey"],"evidence":"https://jobs.lever.co/peakgames"},
+  {"provider":"lever","name":"dreamgames","tags":["turkey"],"evidence":"https://jobs.lever.co/dreamgames"}
+]

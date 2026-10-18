@@ -1,0 +1,80 @@
+{
+  "manifest_version": 3,
+  "name": "TapSubmit — Instant Job Applications",
+  "short_name": "TapSubmit",
+  "version": "1.0.0",
+  "description": "Search, fill, review, and submit job applications directly from your browser using your existing sessions and CV.",
+  "permissions": [
+    "storage",
+    "tabs",
+    "scripting",
+    "declarativeNetRequestWithHostAccess"
+  ],
+  "host_permissions": [
+    "https://tapsubmit.com/*",
+    "https://www.tapsubmit.com/*",
+    "http://127.0.0.1/*",
+    "http://localhost/*",
+    "https://*.greenhouse.io/*",
+    "https://*.lever.co/*",
+    "https://*.ashbyhq.com/*",
+    "https://*.workable.com/*",
+    "https://*.linkedin.com/*",
+    "https://*.indeed.com/*",
+    "https://apis.indeed.com/*",
+    "https://*.glassdoor.com/*",
+    "https://*.myworkdayjobs.com/*",
+    "https://*.smartrecruiters.com/*",
+    "https://*.bamboohr.com/*",
+    "https://himalayas.app/*",
+    "https://remoteok.com/*",
+    "https://jobicy.com/*",
+    "https://remotive.com/*",
+    "https://www.arbeitnow.com/*"
+  ],
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "indeed_headers",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  },
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "TapSubmit",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://tapsubmit.com/*",
+        "https://www.tapsubmit.com/*",
+        "http://127.0.0.1/*",
+        "http://localhost/*"
+      ],
+      "js": ["content-website.js"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://*.greenhouse.io/*",
+        "https://*.lever.co/*",
+        "https://*.ashbyhq.com/*",
+        "https://*.workable.com/*",
+        "https://*.linkedin.com/jobs/*",
+        "https://*.indeed.com/*",
+        "https://*.myworkdayjobs.com/*",
+        "https://*.smartrecruiters.com/*",
+        "https://*.bamboohr.com/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content-apply.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

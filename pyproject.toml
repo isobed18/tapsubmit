@@ -1,0 +1,25 @@
+[project]
+name = "applyburst"
+version = "0.1.0"
+description = "Speed-first job discovery and verified application benchmarks"
+requires-python = ">=3.12"
+dependencies = [
+  "httpx>=0.28,<1", "fastapi>=0.115,<1", "uvicorn>=0.34,<1",
+  "python-multipart>=0.0.20", "aiosmtpd>=1.4,<2", "aiosmtplib>=5,<6",
+  "pypdf>=6.21.1,<7",
+]
+
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["applyburst*"]
+
+[project.optional-dependencies]
+bench = ["playwright>=1.55,<2", "pytest>=8,<10", "pytest-asyncio>=1,<2", "psutil>=7,<8"]
+scraper = ["python-jobspy>=1.1,<2"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

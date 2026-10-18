@@ -1,0 +1,9 @@
+import {readFileSync} from 'node:fs';
+export const SITES=JSON.parse(readFileSync(new URL('../../config/application_sites.json',import.meta.url),'utf8'));
+export function siteForURL(value){try{const url=new URL(value);if(url.protocol!=='https:')return null;return SITES.find(site=>site.domains.some(domain=>url.hostname===domain||url.hostname.endsWith('.'+domain)))||null;}catch{return null;}}
+export function applicationPlan(job,profile,schema=null){
+ const site=siteForURL(job.apply_url),names=String(profile?.name||'').trim().split(/\s+/),facts={name:profile?.name||null,first_name:names.length>1?names.slice(0,-1).join(' '):names[0]||null,last_name:names.length>1?names.at(-1):null,email:profile?.email||null,phone:profile?.phone||null,github:profile?.github||null,linkedin:profile?.linkedin||null,website:profile?.github||null,resume:profile?.filename||null};
+ const fields=(schema?.groups||[]).map(group=>({...group,candidate_value:group.mapping?facts[group.mapping]||null:null}));
+ const missing=fields.filter(group=>group.required&&!group.candidate_value).map(group=>({id:group.id,label:group.label,alternatives:group.alternatives}));
+ return{job_id:job.id,title:job.title,company:job.company,url:job.apply_url,site:site?.id||'employer_custom',flow:site?.flow||'Inspect the employer form',status:!profile?'needs_resume':!schema?'needs_browser_inspection':missing.length?'needs_answers':'needs_browser_verification',recognized_fields:fields.filter(f=>f.candidate_value).length,missing_questions:missing,automatic_submission_verified:false,requires_batch_approval:true,login_may_be_required:!!site?.login,notes:['Only known resume facts are mapped.','Country eligibility, salary, consent and custom screening answers are never invented.','A complete mapping still requires live form validation and a submission confirmation.']};
+}
