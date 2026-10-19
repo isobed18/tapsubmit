@@ -77,7 +77,7 @@ export function publicDiscovery({root,store,search,base,publicOrigin,planner=nul
    const cvText=baseLines.join('\n')+(features.skills.length?'\nSkills: '+features.skills.join(', '):'');
    const plan=planner&&(titles.length||features.roles.length||features.skills.length||explicitQuery)?await planner.planSignals(titles.length?titles:explicitQuery?[explicitQuery]:[],features,{country:features.country}):null;
    const selected=Array.isArray(input.queries)?[...new Set(input.queries.map(q=>String(q).trim().slice(0,120)).filter(Boolean))].slice(0,6):null;
-   let queries=selected??(explicitQuery?[explicitQuery,...(plan?.queries||[]).filter(q=>q.toLowerCase()!==explicitQuery.toLowerCase())].slice(0,4):(plan?.queries||suggestedSearches(features)));
+   let queries=selected?[...new Set([...selected,...(plan?.queries||[])])].slice(0,6):(explicitQuery?[explicitQuery,...(plan?.queries||[]).filter(q=>q.toLowerCase()!==explicitQuery.toLowerCase())].slice(0,4):(plan?.queries||suggestedSearches(features)));
    if(!queries.length){send(422,{error:'Upload your CV or type a role to search.'});return true;}
    const profile={headline:[...(explicitQuery?[explicitQuery]:[]),...titles,...roleLabels].join(', '),skills:features.skills,facts:{early_career:features.level==='early'}};
    const sites=Array.isArray(input.sites)?[...new Set(input.sites.filter(site=>SOURCES.includes(site)))]:DEFAULT_SOURCES;

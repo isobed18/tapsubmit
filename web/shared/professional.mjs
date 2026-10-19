@@ -3,7 +3,7 @@
 export const roleKey=text=>String(text||'').toLowerCase().replaceAll('ı','i').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}+#]+/gu,' ').replace(/\s+/g,' ').trim();
 const indices=new WeakMap();
 // A field of study names its practitioner: "Makine Mühendisliği" -> "Makine Mühendisi", "Mechanical Engineering" -> "Mechanical Engineer".
-const DISCIPLINE={muhendisligi:'muhendisi',muhendislik:'muhendisi',engineering:'engineer',hemsirelik:'hemsire',ogretmenligi:'ogretmeni',ogretmenlik:'ogretmen'};
+const DISCIPLINE={muhendisligi:'muhendisi',muhendislik:'muhendisi',engineering:'engineer',development:'developer',hemsirelik:'hemsire',ogretmenligi:'ogretmeni',ogretmenlik:'ogretmen'};
 const same=(token,word)=>token===word||DISCIPLINE[token]===word;
 export function professionalMatches(text,entries){
  let index=indices.get(entries);if(!index){index=new Map();indices.set(entries,index);for(const entry of entries)for(const alias of new Set([entry.title,...(entry.aliases||[])])){
