@@ -1,4 +1,5 @@
 import {createServer} from 'node:http';
+import {repairResumeText} from './public/resume-reader.mjs';
 import {SharedPool} from './lib/shared-pool.mjs';
 import {cvPreferenceDraft,applyCVPreferences,cvModelFill} from './lib/cv-settings.mjs';
 import {resumeLanguages,LANGUAGES} from './lib/languages.mjs';
@@ -571,6 +572,7 @@ export async function createPortal({root=ROOT,directory=process.env.APPLYBURST_D
     if(!(file instanceof File)||file.size>maximum||!(/\.(pdf|docx|txt)$/i.test(file.name))){send(422,{error:'Upload a PDF, DOCX or UTF-8 TXT resume, up to 12 MB.'});return;}
     const extension=file.name.toLowerCase().split('.').at(-1),temporary=join(directory,randomUUID()+'.'+extension),textFile=temporary+'.txt';writeFileSync(temporary,Buffer.from(await file.arrayBuffer()),{mode:0o600});
     try{let text;if(extension!=='txt'){const {command}=workerCommand(root,'companion'),args=process.env.APPLYBURST_WORKER?['--worker','import_resume',temporary,'--output',textFile]:[join(root,'scripts/import_resume.py'),temporary,'--output',textFile];try{await promisify(execFile)(command,args,{cwd:root,timeout:12000,windowsHide:true,maxBuffer:10000,env:workerEnv()});}catch(error){let message='This CV could not be read. Try a text PDF, DOCX or UTF-8 TXT.';try{message=JSON.parse(error.stdout).error||message;}catch{}if(error.killed)message='Reading this CV took too long. Try a smaller text PDF, DOCX or TXT.';throw Object.assign(new Error(message),{status:422});}text=readFileSync(textFile,'utf8');}else text=readFileSync(temporary,'utf8');
+     text=repairResumeText(text);
      if(text.trim().length<80||text.length>100000)throw new Error('The resume did not contain enough readable text.');const profile=profileFromText(text,file.name.replace(/[^a-zA-Z0-9_. -]/g,'').slice(0,100));writeFileSync(resumeFile,text,{mode:0o600});copyFileSync(temporary,join(directory,'resume.'+extension));try{const plan=await planner.plan(text,{country:store.setting('last_country')||'turkey'});profile.plan={queries:plan.queries,roles:plan.roles.map(r=>r.title),early:plan.early,model:'paraphrase-multilingual-MiniLM-L12-v2',version:PLAN_VERSION,elapsed_ms:plan.elapsed_ms};}catch(error){profile.plan={error:String(error.message).slice(0,200)};}store.setting('profile',profile);store.setting('resume_revision',hash(text));store.setting('resume_file','resume.'+extension);recommendationCache.clear();const cvFilled=fillFromCV(text,true);send(200,{profile,cv_preferences:cvFilled,suggested:profile?.plan?.queries?.length?profile.plan.queries.map((query,i)=>({id:'plan'+i,label:query,query})):suggestedQueries(profile)});
     }finally{for(const file of [temporary,textFile])if(existsSync(file))unlinkSync(file);}return;
    }

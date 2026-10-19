@@ -83,7 +83,7 @@ export function publicDiscovery({root,store,search,base,publicOrigin,planner=nul
    const sites=Array.isArray(input.sites)?[...new Set(input.sites.filter(site=>SOURCES.includes(site)))]:DEFAULT_SOURCES;
    if(!sites.length){send(422,{error:'Choose at least one job source.'});return true;}
    const limit=[25,50,100,200,300].includes(Number(input.limit))?Number(input.limit):100;
-   const hours_old=[24,72,168,720].includes(Number(input.hours_old))?Number(input.hours_old):720;
+   const hours_old=[24,72,168,720,2160,0].includes(Number(input.hours_old))&&input.hours_old!==''&&input.hours_old!=null?Number(input.hours_old):720;
    const discovery=new Discovery({store,search,root,planner}),request={...discoveryRequest({queries,planned:Boolean(plan?.roles?.length),sites,country:features.country,location:String(input.location||'').slice(0,160),work_mode:input.work_mode,remote:features.remote,limit,hours_old,level:['early','senior'].includes(features.level)?features.level:'unknown'},profile),cv_text:cvText,strict_relevance:Boolean(titles.length||features.roles.length)},task=discovery.start(request,{plan});
    tasks.set(task.id,{discovery,profile,at:Date.now()});send(202,{id:task.id,queries,titles:plan?.signal_titles||titles,country:request.country,sites,limit});return true;
   }

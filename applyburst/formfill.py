@@ -1,5 +1,6 @@
 """Apply a compiled plan to the page and verify each value actually took effect."""
 import re
+import time
 import unicodedata
 
 from .formscan import compile_plan, match_suggestion, norm, scan
@@ -32,9 +33,12 @@ async def _single(scope, key):
 async def _check(scope, key, wanted=True):
     """Set a radio/checkbox, including visually hidden inputs behind styled labels."""
     locator = await _single(scope, key)
-    if await locator.is_checked() == wanted:
+    if await locator.is_checked(timeout=2000) == wanted:
         return
     try:
+        # A visually hidden input behind a styled label never becomes actionable: go straight to the fallbacks.
+        if not await locator.is_visible():
+            raise FillError('hidden input')
         await locator.set_checked(wanted, timeout=1500)
     except Exception:
         label = locator.locator('xpath=ancestor::label[1]')
@@ -48,11 +52,21 @@ async def _check(scope, key, wanted=True):
         if not clicked:
             ident = await locator.get_attribute('id')
             target = scope.locator(f'label[for="{ident}"]') if ident else None
-            if target is not None and await target.count():
+            # Custom controls (e.g. LinkedIn's role=radio wrappers) react to clicks on the wrapper.
+            wrapper = locator.locator('xpath=ancestor::*[@role="radio" or @role="checkbox" or @role="option"][1]')
+            if target is not None and await target.count() and await target.first.is_visible():
                 await target.first.click(timeout=1500)
+            elif await wrapper.count():
+                await wrapper.first.click(timeout=1500)
             else:
                 await locator.evaluate('el => el.click()')
-    if await locator.is_checked() != wanted:
+            # React forms (LinkedIn) re-render the control on click; the tagged element can disappear.
+            # Never wait the 30 s default for it: the rescan that follows verifies what stayed.
+            if await locator.count() and await locator.is_checked(timeout=1000) != wanted and await wrapper.count():
+                await wrapper.first.click(timeout=1500)
+    if not await locator.count():
+        return
+    if await locator.is_checked(timeout=1000) != wanted:
         raise FillError('A choice did not stay selected.')
 
 
@@ -204,11 +218,19 @@ async def label_intents(questions, classify):
     from .formscan import identify
     from .preferences import describe
     pending = [q for q in questions if q.get('label') and 'intent' not in q and q.get('kind') not in ('checkbox', 'checkbox_group') and identify(q) is None and describe(q) is None]
-    if pending:
-        results = await classify('fields', [q['label'] for q in pending])
-        for question, result in zip(pending, results or []):
-            question['intent'] = result['label'] if result else None
+    # Every rescan of a step returns the same labels: classify each label once per worker.
+    for question in pending:
+        if question['label'] in _INTENTS:
+            question['intent'] = _INTENTS[question['label']]
+    todo = [q for q in pending if 'intent' not in q]
+    if todo:
+        results = await classify('fields', [q['label'] for q in todo])
+        for question, result in zip(todo, results or []):
+            question['intent'] = _INTENTS[question['label']] = result['label'] if result else None
     return questions
+
+
+_INTENTS = {}
 
 
 async def fill_step(scope, profile, answers, passes=4, stop_on_missing=False, preferences=None, classify=None):
@@ -218,7 +240,7 @@ async def fill_step(scope, profile, answers, passes=4, stop_on_missing=False, pr
     the value is on the page; a value that could not be applied becomes a missing question with
     the reason, so nothing unverified is reported as filled.
     """
-    attempts, problems, known = {}, {}, {}
+    attempts, problems, known, spent = {}, {}, {}, {}
     for _ in range(passes):
         questions = await label_intents(await _with_choices(scope, await scan(scope), known), classify)
         plan = compile_plan(questions, profile, answers, preferences)
@@ -232,6 +254,7 @@ async def fill_step(scope, profile, answers, passes=4, stop_on_missing=False, pr
             break
         for question, entry in todo:
             attempts[entry['fingerprint']] = attempts.get(entry['fingerprint'], 0) + 1
+            started = time.perf_counter()
             try:
                 await apply_entry(scope, question, entry)
                 problems.pop(entry['fingerprint'], None)
@@ -239,6 +262,8 @@ async def fill_step(scope, profile, answers, passes=4, stop_on_missing=False, pr
                 problems[entry['fingerprint']] = str(error)
             except Exception as error:
                 problems[entry['fingerprint']] = 'Could not set this field: ' + str(error).splitlines()[0][:160]
+            finally:
+                spent[question.get('label') or entry['fingerprint'][:8]] = spent.get(question.get('label') or entry['fingerprint'][:8], 0) + round((time.perf_counter() - started) * 1000)
         # Rescan on the next pass: answers can reveal conditional questions.
     final = await label_intents(await _with_choices(scope, await scan(scope), known), classify)
     final_plan = compile_plan(final, profile, answers, preferences)
@@ -260,4 +285,5 @@ async def fill_step(scope, profile, answers, passes=4, stop_on_missing=False, pr
             final_plan['missing'].append({'fingerprint': entry['fingerprint'], 'label': entry['label'] or '(unlabelled question)', 'kind': entry['kind'],
                                           'options': [o.get('label') for o in question.get('options') or []] or None, 'fact': entry.get('fact'),
                                           'problem': entry['problem'], 'error': question.get('error') or None})
+    final_plan['fill_ms'] = spent
     return final, final_plan

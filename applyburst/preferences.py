@@ -36,6 +36,11 @@ def describe(question):
                   'notice_period': 'earliest_start_date' if kind == 'date' else 'notice_period'}.get(intent)
         if target:
             spec = next((spec for spec, _ in PATTERNS if spec['id'] == target), None)
+            # A choice question reuses a saved answer only when its own words name the topic: a
+            # meaning guess alone once read "Did you complete your bachelor's?" as work authorization.
+            cues = {'relocation': r'relocat|tasin|taşın|umzug|demenag|déménag|reubic|move to|moving to'}
+            if spec and kind in ('radio', 'yesno', 'select') and target in cues and not re.search(cues[target], label):
+                spec = None
             if spec and (kind not in ('radio', 'yesno') or spec.get('kind') == 'choice'):
                 return {key: value for key, value in spec.items() if key != 'patterns'}
     # Skill-specific years of experience ("How many years of work experience do you have with Python?")

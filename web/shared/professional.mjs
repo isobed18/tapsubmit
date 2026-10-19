@@ -2,13 +2,16 @@
 // A job catalog's arbitrary words ("Engineering", "Product") are never occupation labels.
 export const roleKey=text=>String(text||'').toLowerCase().replaceAll('ı','i').normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^\p{L}\p{N}+#]+/gu,' ').replace(/\s+/g,' ').trim();
 const indices=new WeakMap();
+// A field of study names its practitioner: "Makine Mühendisliği" -> "Makine Mühendisi", "Mechanical Engineering" -> "Mechanical Engineer".
+const DISCIPLINE={muhendisligi:'muhendisi',muhendislik:'muhendisi',engineering:'engineer',hemsirelik:'hemsire',ogretmenligi:'ogretmeni',ogretmenlik:'ogretmen'};
+const same=(token,word)=>token===word||DISCIPLINE[token]===word;
 export function professionalMatches(text,entries){
  let index=indices.get(entries);if(!index){index=new Map();indices.set(entries,index);for(const entry of entries)for(const alias of new Set([entry.title,...(entry.aliases||[])])){
   const words=roleKey(alias).split(' ');if(words.join('').length<4||words.length>12)continue;
   const list=index.get(words[0])||[];list.push({words,entry,direct:roleKey(alias)===roleKey(entry.title)});index.set(words[0],list);
  }}
  const tokens=roleKey(text).split(' '),hits=[];
- for(let at=0;at<tokens.length;at++)for(const item of index.get(tokens[at])||[]){if(item.words.every((word,i)=>tokens[at+i]===word))hits.push({...item,at,end:at+item.words.length});}
+ for(let at=0;at<tokens.length;at++)for(const item of index.get(tokens[at])||[]){if(item.words.every((word,i)=>same(tokens[at+i],word)))hits.push({...item,at,end:at+item.words.length});}
  hits.sort((a,b)=>b.words.length-a.words.length||Number(b.direct)-Number(a.direct)||a.at-b.at||a.entry.title.localeCompare(b.entry.title));
  // Resolve overlapping spans first without dropping repeated mentions of the same occupation across a CV.
  const spans=[];for(const hit of hits){if(spans.some(other=>other.at<hit.end&&other.end>hit.at))continue;spans.push(hit);}

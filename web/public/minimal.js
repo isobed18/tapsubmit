@@ -322,7 +322,7 @@ function searchInput(limitOverride=null){
   sites:s.sites||defaultSites,
   // Unset = the server uses languages found in the CV; an explicit empty list disables the language filter.
   ...(Array.isArray(s.languages)?{languages:s.languages}:{}),
-  hours_old:Number(s.hours_old||168),
+  hours_old:Number(s.hours_old??168),
   limit:Number(limitOverride||s.limit||100),
   force:!!s.force,
   remote:$('#work-mode').value==='remote_only',
@@ -344,7 +344,7 @@ function renderSettings(){
  $('#job-languages').querySelectorAll('label').forEach(node=>node.remove());
  const languages=new Set(Array.isArray(s.languages)?s.languages:activeProfile()?.languages||[]);
  for(const [id,name]of b.languages||[]){const label=el('label','check'),box=el('input');box.type='checkbox';box.value=id;box.checked=languages.has(id);label.append(box,document.createTextNode(name));$('#job-languages').append(label);}
- $('#hours').value=String(s.hours_old||168);$('#limit').value=String(s.limit||100);$('#location').value=s.location||'';$('#remote').checked=!!s.remote;$('#fresh').checked=!!s.force;$('#signed').checked=s.signed===undefined?!!S.boot?.sessions?.linkedin?.signed_in:!!s.signed;$('#easy').checked=!!s.easy;
+ $('#hours').value=String(s.hours_old??168);$('#limit').value=String(s.limit||100);$('#location').value=s.location||'';$('#remote').checked=!!s.remote;$('#fresh').checked=!!s.force;$('#signed').checked=s.signed===undefined?!!S.boot?.sessions?.linkedin?.signed_in:!!s.signed;$('#easy').checked=!!s.easy;
  $('#targets').querySelectorAll('label').forEach(node=>node.remove());
  for(const [site,name]of Object.entries(SITE_NAME)){const label=el('label','check'),box=el('input');box.type='checkbox';box.value=site;box.checked=!!b.permissions.sites[site];label.append(box,document.createTextNode(name));$('#targets').append(label);}
  $('#run-cap').value=s.application_limit||10;$('#daily-cap').value=b.permissions.daily_cap;$('#concurrency').value=String(b.pace.concurrency||2);$('#linkedin-pace').value=b.pace.linkedin_apply_seconds||4;
@@ -1018,6 +1018,31 @@ function drop(entry){
  S.cards.delete(entry.card.id);const node=entry.node;entry.mirror?.remove();
  if(entry.list==='stream'&&!S.initial){node.querySelector('.state-text').textContent='Filtered out';node.style.maxHeight=node.scrollHeight+'px';requestAnimationFrame(()=>node.classList.add('leaving','dropped'));setTimeout(()=>node.remove(),360);}else node.remove();
 }
+// Site columns read like text (left to right, then the next row), busiest first; empty columns last.
+// CSS order keeps each column's own scroll position (no DOM moves).
+const columnSeen=new WeakMap();let columnSeq=0,columnFrame=0;
+function orderColumns(){
+ columnFrame=0;const stream=$('#nodes-stream');if(!stream)return;
+ for(const section of stream.children){
+  if(!columnSeen.has(section))columnSeen.set(section,++columnSeq);
+  const count=section.querySelectorAll('.node-jobs-list > .card').length;
+  section.style.order=String(-count*10000+columnSeen.get(section));
+ }
+}
+function scheduleColumnOrder(){if(!columnFrame)columnFrame=requestAnimationFrame(orderColumns);}
+new MutationObserver(scheduleColumnOrder).observe(document.querySelector('#nodes-stream')||document.body,{childList:true,subtree:true});
+// Role suggestions from the occupation vocabulary used to read CVs (titles and multilingual aliases).
+let roleVocabulary=null,roleIndex=null;
+async function suggestRoles(){
+ const fold=t=>String(t||'').toLocaleLowerCase('tr').normalize('NFKD').replace(/\p{M}/gu,'').replace(/ı/g,'i').trim(),q=fold($('#query').value),list=$('#role-suggestions');
+ if(q.length<2){list.replaceChildren();return;}
+ try{roleVocabulary??=(await fetch(BASE+'public/vocabulary').then(r=>r.ok?r.json():{entries:[]})).entries||[];}catch{roleVocabulary=[];}
+ roleIndex??=roleVocabulary.flatMap(e=>[...new Set([e.title,...(e.aliases||[])])].map(label=>({label,key:fold(label)})));
+ const starts=[],contains=[],seen=new Set();
+ for(const item of roleIndex){if(seen.has(item.key))continue;const at=item.key.indexOf(q);if(at<0)continue;seen.add(item.key);(at===0||item.key[at-1]===' '?starts:contains).push(item);if(starts.length>=20)break;}
+ list.replaceChildren(...[...starts.sort((a,b)=>a.label.length-b.label.length),...contains.sort((a,b)=>a.label.length-b.label.length)].slice(0,20).map(item=>{const o=document.createElement('option');o.value=item.label;return o;}));
+}
+document.querySelector('#query')?.addEventListener('input',()=>{suggestRoles();});
 function resetStream(){
  S.cards.clear();
  LOCAL_NODE_SECTIONS.clear();

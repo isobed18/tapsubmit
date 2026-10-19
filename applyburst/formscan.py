@@ -34,6 +34,18 @@ SCAN = r'''(root) => {
    if (t.matches('label') && t.control && t.control !== el && !group) continue;
    const text = clean(t.innerText || t.textContent); if (text) return text;
   }
+  return preceding(box);
+ }
+ // Forms that render the question as a plain text block right before the control group
+ // (e.g. LinkedIn Easy Apply 2026: <p>Question*</p><fieldset role=radiogroup>…).
+ function preceding(node) {
+  for (let n = node, depth = 0; n && depth < 3; n = n.parentElement, depth++) {
+   const p = n.previousElementSibling;
+   if (p && !p.querySelector('input,select,textarea,button') && !p.matches('input,select,textarea,button')) {
+    const text = clean(p.innerText || p.textContent); if (text && text.length <= 400) return text;
+   }
+   if (p) break;
+  }
   return '';
  }
  function ownLabel(el) {
@@ -76,8 +88,11 @@ SCAN = r'''(root) => {
    if (seenGroups.has(groupKey)) continue; seenGroups.add(groupKey);
    const members = el.name ? [...scope.querySelectorAll('input[type=' + type + '][name="' + CSS.escape(el.name) + '"]')] : [...(box || el.parentElement).querySelectorAll('input[type=' + type + ']')];
    if (!members.some(proxyShown)) continue;
-   const text = title(box, el, true) || ownLabel(el);
-   const options = members.map(m => ({label: clean([...(m.labels || [])].map(l => l.innerText || l.textContent).join(' ')) || clean(m.closest('label')?.innerText) || m.value, value: m.value, key: keyOf(m)}));
+   const text = title(box, el, true) || ownLabel(el) || clean(el.closest('[role=radio],[role=checkbox]')?.getAttribute('aria-label'));
+   // Option text: its <label>, else a custom role=radio wrapper's visible text, else text beside the input.
+   const optionText = m => clean([...(m.labels || [])].map(l => l.innerText || l.textContent).join(' ')) || clean(m.closest('label')?.innerText)
+    || clean(m.closest('[role=radio],[role=checkbox],[role=option]')?.innerText) || clean(m.parentElement?.nextElementSibling?.innerText) || m.value;
+   const options = members.map(m => ({label: optionText(m), value: m.value, key: keyOf(m)}));
    out.push({key: keyOf(members[0]), kind: type === 'radio' ? 'radio' : 'checkbox_group', label: text, required: members.some(m => required(m, box, text)), options,
     value: type === 'radio' ? (options.find((o, i) => members[i].checked)?.label || '') : options.filter((o, i) => members[i].checked).map(o => o.label), name: el.name || '', id: '', error: errorText(box, el)});
    continue;
@@ -283,6 +298,66 @@ def file_digest(path):
     return hashlib.sha256(data).hexdigest()
 
 
+_RESIDE = re.compile(r"(?:do you|are you(?: currently)?)\s+(?:live|living|reside|residing|based|located)\s+in\s+(?:the\s+)?(?P<a>[^?,(]{2,60})"
+                     r"|(?P<b>[^?,]{2,60}?)['’]?(?:da|de|ta|te)\s+m[ıiuü]\s+(?:ikamet|ya[sş]|otur)", re.I)
+_PLACE_ALIASES = {'turkiye': 'turkey', 'deutschland': 'germany', 'united states': 'usa', 'united kingdom': 'uk', 'nederland': 'netherlands'}
+_GENERIC_PLACE = {'greater', 'area', 'region', 'metropolitan', 'metro', 'city', 'the', 'province', 'state', 'il', 'ili', 'sehri', 'sehir', 'merkez'}
+
+
+def _fold_place(text):
+    text = unicodedata.normalize('NFKD', str(text or '').replace('ı', 'i').replace('İ', 'i')).encode('ascii', 'ignore').decode().lower()
+    text = re.sub(r'[^a-z ,]+', ' ', text)
+    for alias, name in _PLACE_ALIASES.items():
+        text = text.replace(alias, name)
+    return text
+
+
+_CITY_INDEX = None
+
+
+def _cities():
+    """name -> set of regions, from the bundled per-country gazetteers (config/cities/*.json)."""
+    global _CITY_INDEX
+    if _CITY_INDEX is None:
+        _CITY_INDEX = {}
+        for path in (Path(__file__).resolve().parents[1] / 'config' / 'cities').glob('*.json'):
+            try:
+                for row in json.loads(path.read_text(encoding='utf-8')):
+                    _CITY_INDEX.setdefault(_fold_place(row.get('name')).strip(), set()).add(_fold_place(row.get('region')).strip())
+            except Exception:
+                continue
+    return _CITY_INDEX
+
+
+def _other_city(place, home):
+    """True when `place` is a known city that is neither the home city nor a district inside it."""
+    index, home_city = _cities(), home.split(',')[0].strip()
+    if place not in index or home_city not in index or place == home_city:
+        return False
+    return home_city not in index[place]
+
+
+def residence_answer(question, location):
+    """'Do you live in X?' / 'X'te mi ikamet ediyorsunuz?' from the person's own location.
+    Yes when X matches it; No only when the location names both a city and a country and X matches
+    neither; otherwise unknown (the question is asked)."""
+    if question.get('kind') not in ('radio', 'select', 'yesno') or not location:
+        return None
+    match = _RESIDE.search(question.get('label') or '')
+    if not match:
+        return None
+    place = [w for w in _fold_place(match.group('a') or match.group('b')).replace(',', ' ').split() if len(w) >= 3 and w not in _GENERIC_PLACE]
+    home = _fold_place(location)
+    if not place:
+        return None
+    lives_there = any(re.search(r'\b' + re.escape(w) + r'\b', home) for w in place[-2:])
+    if not lives_there and len([p for p in home.split(',') if p.strip()]) < 2 and not _other_city(place[-1], home):
+        return None
+    yes, no = re.compile(r'^(yes|evet|ja|oui|si|sí|sim)\b', re.I), re.compile(r'^(no|hay[ıi]r|nein|non|nao|não)\b', re.I)
+    wanted = yes if lives_there else no
+    return next((o['label'] for o in question.get('options') or [] if wanted.search(str(o.get('label') or '').strip())), None)
+
+
 def compile_plan(questions, profile, answers=None, preferences=None):
     """Decide each question's action. Returns entries plus missing required questions.
 
@@ -307,6 +382,10 @@ def compile_plan(questions, profile, answers=None, preferences=None):
             preference = resolve(question, preferences)
             if preference:
                 value, source = preference['value'], 'user_preference'
+            else:
+                derived = residence_answer(question, (profile or {}).get('location'))
+                if derived:
+                    value, source = derived, 'derived_from_location'
         entry = {'key': question['key'], 'fingerprint': fp, 'label': question.get('label') or '', 'kind': kind, 'fact': fact,
                  'required': bool(question.get('required')), 'source': source, 'options': question.get('options')}
         if source == 'user_preference': entry['preference_id'] = preference['id']

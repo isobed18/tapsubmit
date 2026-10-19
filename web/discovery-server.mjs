@@ -11,6 +11,7 @@ import {publicDiscovery} from './lib/public-discovery.mjs';
 import {decorate} from './lib/jobs.mjs';
 import {semanticStats,encoder} from './lib/semantic.mjs';
 import {PublicPool} from './lib/public-pool.mjs';
+import {createHash} from 'node:crypto';
 
 const ROOT=fileURLToPath(new URL('..',import.meta.url));
 export async function createDiscoveryServer({root=ROOT,directory=process.env.APPLYBURST_DATA||join(ROOT,'.data/railway-preview'),publicOrigin=process.env.APPLYBURST_PUBLIC_ORIGIN||'https://tapsubmit.com',seed=true}={}){
@@ -48,6 +49,10 @@ export async function createDiscoveryServer({root=ROOT,directory=process.env.APP
   '/assets/tom-select.css':['web/public/vendor/tom-select/tom-select.min.css','text/css; charset=utf-8'],
  };
  const cache=new Map();
+ // Cloudflare keeps /assets for hours whatever we send: every asset URL carries a content version, so a
+ // deploy is never served a cached script that no longer matches its page.
+ const BUILD=createHash('sha256').update(['web/public/discovery.html','web/public/discovery.js','web/public/discovery.css','web/public/city-picker.mjs','web/public/resume-reader.mjs','web/shared/features.mjs','web/shared/professional.mjs','web/public/client-engine.mjs'].map(p=>existsSync(join(root,p))?readFileSync(join(root,p),'utf8'):'').join('|')).digest('hex').slice(0,12);
+ const versioned=text=>String(text).replace(/(from\s*'|import\(')\.\/([\w.-]+\.m?js)'/g,(_,head,name)=>head+'./'+name+'?v='+BUILD+"'").replace(/(\/assets\/[\w.-]+\.(?:js|mjs|css))"/g,(_,url)=>url+'?v='+BUILD+'"');
  const csp="default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data:; connect-src 'self' https://remoteok.com https://jobicy.com https://remotive.com https://www.arbeitnow.com; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'";
  const server=createServer(async(req,res)=>{
   const host=req.headers.host||'localhost';
@@ -69,7 +74,7 @@ export async function createDiscoveryServer({root=ROOT,directory=process.env.APP
    if(req.method==='GET'&&path==='/healthz'){
     send(200,{status:'ok',mode:'discovery_only',registration:false,applications:false,gpu:false,generative_llm:false,semantic_cpu:semanticStats().loaded,rss_mb:Math.round(process.memoryUsage().rss/1048576)});return;
    }
-   if(req.method==='GET'&&(path==='/'||path==='/index.html')){send(200,readFileSync(join(root,'web/public/discovery.html')),'text/html; charset=utf-8');return;}
+   if(req.method==='GET'&&(path==='/'||path==='/index.html')){send(200,versioned(readFileSync(join(root,'web/public/discovery.html'),'utf8')),'text/html; charset=utf-8');return;}
    if(req.method==='GET'&&path==='/robots.txt'){send(200,'User-agent: *\nDisallow: /api/\nDisallow: /applyburst/api/\n','text/plain');return;}
    // Download the shared pool (public posting metadata only, gzip JSON lines). Streamed, never buffered.
    if(req.method==='GET'&&path==='/download/jobs.jsonl.gz'){
@@ -79,8 +84,10 @@ export async function createDiscoveryServer({root=ROOT,directory=process.env.APP
    if(req.method==='GET'&&path==='/download/jobs-manifest.json'){const file=join(root,'public-pool/manifest.json');if(existsSync(file)){send(200,readFileSync(file),'application/json',{'Cache-Control':'public, max-age=3600'});return;}}
    if(req.method==='GET'&&assets[path]){
     const[file,type]=assets[path],full=join(root,file);if(!existsSync(full)){send(404,{error:'Download is not available yet.'});return;}
-    if(!cache.has(file))cache.set(file,readFileSync(full));
-    send(200,cache.get(file),type,{'Cache-Control':'public, max-age=300',...(type==='application/zip'?{'Content-Disposition':'attachment; filename="tapsubmit-extension.zip"'}:{})});return;
+    if(!cache.has(file))cache.set(file,/.m?js$/.test(file)&&!file.includes('/vendor/')?Buffer.from(versioned(readFileSync(full,'utf8'))):readFileSync(full));
+    // Page code must never be older than the page: a cached script against a new HTML broke the site
+    // after a deploy ("Cannot read properties of null (reading 'checked')"). Vendor files may cache.
+    send(200,cache.get(file),type,{'Cache-Control':file.includes('/vendor/')?'public, max-age=86400':'no-cache'});return;
    }
    if(await handler({req,path,url,send,json,host}))return;
    req.resume();send(404,{error:'This preview supports job discovery only.'});

@@ -36,7 +36,7 @@
 
  <div class="search-input">
   <span aria-hidden="true">⌕</span>
-  <input id="query" aria-label="Optional job title or keyword" maxlength="120" autocomplete="off" placeholder="Or add a role, like AI Engineer">
+  <input id="query" aria-label="Optional job title or keyword" maxlength="120" autocomplete="off" placeholder="Or add a role, like AI Engineer" list="role-suggestions"><datalist id="role-suggestions"></datalist>
   <button id="add-query-btn" type="button">Add role</button>
   <button id="start" type="button">Start <span aria-hidden="true">↗</span></button>
   <button id="pause" class="ghost" type="button" hidden>Pause</button>
@@ -140,7 +140,7 @@
    <fieldset id="sites" class="checks"><legend>Job sources</legend></fieldset>
    <fieldset id="job-languages" class="checks"><legend>Languages you can work in</legend><p class="fine">Jobs written in, or explicitly requiring, another language are hidden. Pre-selected from your CV; uncheck all to show every language.</p></fieldset>
    <div class="grid">
-    <label>Posted<select id="hours"><option value="24">Past day</option><option value="72">Past 3 days</option><option value="168" selected>Past week</option><option value="720">Past month</option></select></label>
+    <label>Posted<select id="hours"><option value="24">Past day</option><option value="72">Past 3 days</option><option value="168" selected>Past week</option><option value="720">Past month</option><option value="2160">Past 3 months</option><option value="0">Any time</option></select></label>
     <label>Jobs per source<select id="limit"><option value="25">25</option><option value="50">50</option><option value="100" selected>100</option></select></label>
    </div>
    <input id="location" type="hidden"><input id="remote" type="checkbox" hidden>

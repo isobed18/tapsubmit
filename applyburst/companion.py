@@ -329,7 +329,7 @@ async def await_outcome(page, scope, adapter, before, emit, job, confirm_timeout
 
 def summarise_steps(steps):
     return [{'step': s['step'], 'questions': len(s['entries']), 'filled_or_kept': sum(e['action'] in ('fill', 'keep') for e in s['entries']),
-             'missing': sum(e['action'] == 'missing' for e in s['entries'])} for s in steps]
+             'missing': sum(e['action'] == 'missing' for e in s['entries']), 'ms': s.get('ms'), 'fill_ms': s.get('fill_ms')} for s in steps]
 
 
 async def execute(page, job, request, emit, mode):
@@ -481,7 +481,7 @@ async def _execute(page, job, request, emit, mode, deadline):
             await settle(scope)
             questions, plan = await fill_step(scope, profile, answers,stop_on_missing=mode=='auto',preferences=request.get('preferences'),classify=request.get('_classify'))
             timings['fill_and_verify']=timings.get('fill_and_verify',0)+(time.perf_counter()-stage)*1000
-            steps.append({'step': index + 1, 'entries': plan['entries']})
+            steps.append({'step': index + 1, 'entries': plan['entries'], 'ms': round((time.perf_counter()-stage)*1000), 'fill_ms': plan.get('fill_ms')})
             entries.extend(plan['entries'])
             if plan['missing']:
                 return done({'state': 'needs_answers', 'missing': plan['missing'], 'disclosure': disclosure(entries),
@@ -495,7 +495,7 @@ async def _execute(page, job, request, emit, mode, deadline):
                 fields=disclosure(entries)
                 if mode=='auto':
                     policy=request.get('permission') or {}
-                    sources={'resume','approved_answer','derived_from_phone','user_preference'}
+                    sources={'resume','approved_answer','derived_from_phone','derived_from_location','user_preference'}
                     if policy.get('mode')=='auto_all':sources.add('site_prefilled')
                     if policy.get('mode') not in ('auto_known','auto_all') or policy.get('paused') or not policy.get('sites',{}).get(family) or any(row.get('source') not in sources for row in fields):
                         prefilled=[row.get('label','Field') for row in fields if row.get('source')=='site_prefilled']
@@ -537,12 +537,48 @@ async def _execute(page, job, request, emit, mode, deadline):
             if not changed:
                 questions = await scan(scope)
                 errors = [q for q in questions if q.get('error')]
-                return done({'state': 'needs_answers' if errors else 'adapter_needs_update', 'note': 'The website did not accept this step.',
-                             'missing': [{'fingerprint': None, 'label': q['label'], 'kind': q['kind'], 'error': q['error']} for q in errors][:20]})
+                # Every question this step left empty (judged optional, or its value did not stay). When the
+                # site refuses the step, those are the likely required ones: ask the person instead of
+                # reporting an unrecognised form.
+                left = [e for e in plan['entries'] if e.get('action') in ('skip', 'missing')]
+                debug = await save_step_debug(request, job, page, scope, index + 1)
+                step_detail = [{'label': e.get('label'), 'kind': e.get('kind'), 'action': e.get('action'), 'source': e.get('source'),
+                                'problem': e.get('problem')} for e in plan['entries']][:30]
+                if errors or left:
+                    missing = [{'fingerprint': None, 'label': q['label'], 'kind': q['kind'], 'error': q['error']} for q in errors]
+                    choices = {q.get('label'): [o.get('label') for o in q.get('options') or []] or None for q in questions}
+                    missing += [{'fingerprint': e.get('fingerprint'), 'label': e.get('label') or '(unlabelled question)', 'kind': e.get('kind'),
+                                 'options': choices.get(e.get('label')), 'problem': e.get('problem')} for e in left
+                                if not any(m['label'] == e.get('label') for m in missing)]
+                    return done({'state': 'needs_answers', 'missing': missing[:20], 'step_detail': step_detail, 'debug': debug,
+                                 'note': 'The website did not accept this step. Answer the questions below and retry; nothing was submitted.'})
+                return done({'state': 'adapter_needs_update', 'note': 'The website did not accept this step.', 'step_detail': step_detail, 'debug': debug})
         return done({'state': 'adapter_needs_update', 'note': 'More steps than this adapter allows.'})
     except Exception as error:
         message = str(error).splitlines()[0][:300] if str(error) else type(error).__name__
         return done({'state': 'unknown_after_submit' if submitted else 'failed_before_submit', 'error': message})
+
+
+async def save_step_debug(request, job, page, scope, step):
+    """Keep the refused step's HTML and a screenshot in the local data folder (never uploaded) so a
+    rejected application step can be diagnosed. Only the 20 newest captures are kept."""
+    try:
+        folder = Path(request['browser_profile']).resolve().parent / 'debug'
+        folder.mkdir(parents=True, exist_ok=True)
+        stem = re.sub(r'[^A-Za-z0-9_-]+', '_', str(job.get('id') or 'job'))[:80] + f'-step{step}-{int(time.time())}'
+        html = await scope.evaluate('e => e.outerHTML') if hasattr(scope, 'evaluate') and scope is not page else await page.content()
+        (folder / (stem + '.html')).write_text(html, encoding='utf-8')
+        try:
+            await page.screenshot(path=str(folder / (stem + '.png')), full_page=False, timeout=5000)
+        except Exception:
+            pass
+        captures = sorted(folder.glob('*.html'), key=lambda p: p.stat().st_mtime)
+        for old in captures[:-20]:
+            old.unlink(missing_ok=True)
+            old.with_suffix('.png').unlink(missing_ok=True)
+        return str(folder / (stem + '.html'))
+    except Exception:
+        return None
 
 
 async def emit_intent(request, job, digest,**detail):

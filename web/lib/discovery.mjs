@@ -39,7 +39,7 @@ export function discoveryRequest(input,profile){
  if(!queries.length)throw new Error('Enter what you are looking for, or upload a resume for suggestions.');
  const sites=[...new Set((Array.isArray(input.sites)?input.sites:SOURCES.filter(s=>s.default).map(s=>s.id)).filter(site=>SOURCES.some(s=>s.id===site)))];
  if(!sites.length)throw new Error('Choose at least one website.');
- const country=COUNTRIES.some(([id])=>id===input.country)?input.country:'turkey',hours=[24,72,168,720].includes(Number(input.hours_old))?Number(input.hours_old):168;
+ const country=COUNTRIES.some(([id])=>id===input.country)?input.country:'turkey',hours=[24,72,168,720,2160,0].includes(Number(input.hours_old))&&input.hours_old!==''&&input.hours_old!==null&&input.hours_old!==undefined?Number(input.hours_old):168;
  const work_mode=['remote_only','local_only','local_and_remote','anywhere'].includes(input.work_mode)?input.work_mode:input.remote?'remote_only':input.location?'local_and_remote':'anywhere';
  return{queries,match_queries:match_queries.length?match_queries:queries,explicit:!!match_queries.length&&!input.planned,sites,location:String(input.location??'').trim().slice(0,160),work_mode,country,limit:Math.min(300,Math.max(5,Number(input.limit)||25)),easy_apply:!!input.easy_apply,hours_old:hours,remote:work_mode==='remote_only',force:!!input.force,linkedin_signed_in:!!input.linkedin_signed_in,level:['early','mid','senior','unknown'].includes(input.level)?input.level:null,
   // Working languages: explicit choice first, otherwise those found in the CV. Empty = no language filter.

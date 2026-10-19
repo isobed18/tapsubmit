@@ -1,5 +1,16 @@
 // This module never makes a network request with the file or extracted text.
-export async function resumeText(file){
+export async function resumeText(file){return repairResumeText(await readResume(file));}
+// Some PDF exporters place every word on its own line: words inside a phrase are separated by one
+// blank line and phrases by two or more. Rejoin them so titles such as "Makine Mühendisliği" survive.
+export function repairResumeText(text){
+ const lines=String(text||'').split(/\r?\n/),filled=lines.filter(l=>l.trim());
+ if(filled.length<40||filled.filter(l=>!/\s/.test(l.trim())).length<filled.length*0.8)return text;
+ const out=[];let phrase=[],blank=0;
+ for(const line of lines){if(!line.trim()){blank++;continue;}if(phrase.length&&blank>=2){out.push(phrase.join(' '));phrase=[];}phrase.push(line.trim());blank=0;}
+ if(phrase.length)out.push(phrase.join(' '));
+ return out.join('\n');
+}
+async function readResume(file){
  if(file.size>12*1024*1024)throw new Error('Use a CV smaller than 12 MB.');
  if(/\.txt$/i.test(file.name))return(await file.text()).slice(0,100000);
  const bytes=new Uint8Array(await file.arrayBuffer());

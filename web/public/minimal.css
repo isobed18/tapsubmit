@@ -147,7 +147,7 @@ h1 em{font-family:Georgia,"Times New Roman",serif;font-weight:400;color:var(--gr
 .results-heading .eyebrow{font-size:9px;letter-spacing:1.7px}
 h2{font-size:23px;font-weight:600;letter-spacing:-.8px;margin:8px 0}
 .summary{font-size:11px;color:var(--muted);line-height:1.5;margin:7px 0}
-.busy{display:inline-block;width:7px;height:7px;margin:0 0 3px 10px;border-radius:50%;background:#79a365;animation:breathe 1.2s ease-in-out infinite}
+.busy:not(.card){display:inline-block;width:7px;height:7px;margin:0 0 3px 10px;border-radius:50%;background:#79a365;animation:breathe 1.2s ease-in-out infinite}
 .counters{display:flex;flex-wrap:wrap;gap:7px;max-width:760px;margin:14px auto 20px}
 .counter{display:flex;align-items:baseline;gap:6px;padding:5px 9px;border:1px solid var(--line);border-radius:7px;background:var(--white)}
 .counter b{font-size:13px;font-weight:650;font-variant-numeric:tabular-nums}
@@ -353,3 +353,8 @@ main[aria-busy="true"] #auth-button{color:var(--quiet)}
 .trust-note{font-size:12px;line-height:1.6;color:#4b5146;background:#ecf1e7;border-radius:9px;padding:10px 12px;margin:8px 0 12px}
 .trust-note a{color:#426c45}
 .pref-source{display:inline-block;margin-left:6px;font-size:10px;color:#426c45;background:#ecf1e7;border-radius:6px;padding:1px 6px}
+/* Site columns wrap into rows (3 per row on wide screens) instead of one horizontally scrolled strip. */
+.nodes-stream{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;overflow:visible;padding:2px 0 14px;scroll-snap-type:none}
+.site-node-section{flex:none;min-width:0;height:520px;max-height:calc(100vh - 170px)}
+@media(max-width:1000px){.nodes-stream{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:640px){.nodes-stream{grid-template-columns:minmax(0,1fr)}.site-node-section{flex-basis:auto;height:460px}}
