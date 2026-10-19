@@ -8,7 +8,9 @@ import {summarizeExclusions} from './matching.mjs';
 
 const SOURCES=['indeed','himalayas','remoteok','jobicy','remotive','arbeitnow','boards','linkedin'];
 const DEFAULT_SOURCES=SOURCES.filter(source=>source!=='linkedin');
-export function publicDiscovery({root,store,search,base,publicOrigin,planner=null,publicOrigins=[],maxRunning=4,maxTasks=300,pool=null}){
+// Fit summary for the browser: percentage, verdict and named dimensions (no model internals).
+const publicFit=fit=>fit?{percent:fit.percent,verdict:fit.verdict,calibrated:fit.calibrated,dimensions:fit.dimensions,strengths:fit.strengths,gaps:fit.gaps}:null;
+export function publicDiscovery({root,store,search,base,publicOrigin,planner=null,publicOrigins=[],maxRunning=4,maxTasks=300,pool=null,matcher=null}){
  // Shared pool size shown to visitors: the exported harvest plus jobs visitors chose to share.
  const poolStats=()=>({...(pool?.stats()||{records:0}),shared_by_visitors:store.db.prepare("SELECT count(*) n FROM jobs WHERE active=1 AND source_id NOT LIKE '%:%'").get().n});
  const tasks=new Map(),limits=new Map();let vocabulary=null;
@@ -25,6 +27,10 @@ export function publicDiscovery({root,store,search,base,publicOrigin,planner=nul
   if(req.method==='GET'&&path==='/assets/features.mjs'){send(200,readFileSync(join(root,'web/shared/features.mjs'),'utf8').replace('../../demo/lib/taxonomy.mjs','./taxonomy.mjs'),'text/javascript');return true;}
   if(req.method==='GET'&&path==='/assets/professional.mjs'){send(200,readFileSync(join(root,'web/shared/professional.mjs')),'text/javascript');return true;}
   if(req.method==='GET'&&path==='/assets/taxonomy.mjs'){send(200,readFileSync(join(root,'demo/lib/taxonomy.mjs')),'text/javascript');return true;}
+  // CV skill extraction runs in the browser with the matcher's own vocabulary; only skill ids are sent back.
+  if(req.method==='GET'&&path==='/assets/match-skills.mjs'){send(200,readFileSync(join(root,'web/lib/match/skills.mjs')),'text/javascript');return true;}
+  if(req.method==='GET'&&path==='/assets/match-vocab.json'){send(200,readFileSync(join(root,'config/match/skills.json')),'application/json');return true;}
+  if(req.method==='GET'&&path==='/assets/match-ui.mjs'){send(200,readFileSync(join(root,'web/public/match-ui.mjs')),'text/javascript');return true;}
   if(!path.startsWith('/api/public/'))return false;
   const ip=String(req.headers['cf-connecting-ip']||req.socket.remoteAddress||'local');
   if(limited('read:'+ip,240)){req.resume();send(429,{error:'Please wait a moment.'});return true;}
@@ -86,7 +92,10 @@ export function publicDiscovery({root,store,search,base,publicOrigin,planner=nul
    if(!sites.length){send(422,{error:'Choose at least one job source.'});return true;}
    const limit=[25,50,100,200,300].includes(Number(input.limit))?Number(input.limit):100;
    const hours_old=[24,72,168,720,2160,0].includes(Number(input.hours_old))&&input.hours_old!==''&&input.hours_old!=null?Number(input.hours_old):720;
-   const discovery=new Discovery({store,search,root,planner}),request={...discoveryRequest({queries,planned:Boolean(plan?.roles?.length),sites,country:features.country,location:String(input.location||'').slice(0,160),work_mode:input.work_mode,remote:features.remote,limit,hours_old,level:['early','senior'].includes(features.level)?features.level:'unknown'},profile),cv_text:cvText,strict_relevance:Boolean(titles.length||features.roles.length)},task=discovery.start(request,{plan});
+   // Pool-wide matching receives the same whitelisted signals: vocabulary titles, matcher vocabulary skill ids, level.
+   const skillIds=(Array.isArray(input.skill_ids)?input.skill_ids:[]).map(Number).filter(n=>Number.isInteger(n)&&n>=0&&n<16384).slice(0,60);
+   const match_signals={titles:[...(explicitQuery?[explicitQuery]:[]),...titles].slice(0,4),skills:[...skillIds,...features.skills],level:features.level==='early'?'junior':features.level==='senior'?'senior':null};
+   const discovery=new Discovery({store,search,root,planner,matcher}),request={...discoveryRequest({queries,planned:Boolean(plan?.roles?.length),sites,country:features.country,location:String(input.location||'').slice(0,160),work_mode:input.work_mode,remote:features.remote,limit,hours_old,level:['early','senior'].includes(features.level)?features.level:'unknown'},profile),cv_text:cvText,strict_relevance:Boolean(titles.length||features.roles.length),match_signals},task=discovery.start(request,{plan});
    tasks.set(task.id,{discovery,profile,at:Date.now()});send(202,{id:task.id,queries,titles:plan?.signal_titles||titles,country:request.country,sites,limit});return true;
   }
   if(path==='/api/public/stop'&&req.method==='POST'){
@@ -95,7 +104,7 @@ export function publicDiscovery({root,store,search,base,publicOrigin,planner=nul
   }
   if(path==='/api/public/status'&&req.method==='GET'){
    const item=tasks.get(url.searchParams.get('id'));if(!item){send(404,{error:'Search expired. Upload your CV again.'});return true;}
-   const task=item.discovery.task,ranked=item.discovery.ranked(task,item.profile),jobs=ranked.results.filter(job=>task.request.country==='worldwide'||job.match.geography.status!=='unknown').slice(0,500).map(job=>{const r=applyRoute(job);return{id:job.id,title:job.title,company:job.company,location:job.location,workplace:job.workplace||null,url:job.destination_url||job.apply_url,listing_url:job.listing_url||job.apply_url,destination_url:job.destination_url||null,posted_at:job.posted_at,seen_at:job.seen_at,source:job.provider,route:r.label,family:r.family,automatable:r.automatable,review:!job.match.auto_selectable,closest_role:job.match.closest_role,skills:job.match.overlap.slice(0,5),experience_review:job.match.seniority_conflict||job.match.experience_review};});
+   const task=item.discovery.task,ranked=item.discovery.ranked(task,item.profile),jobs=ranked.results.filter(job=>task.request.country==='worldwide'||job.match.geography.status!=='unknown').slice(0,500).map(job=>{const r=applyRoute(job);return{id:job.id,title:job.title,company:job.company,location:job.location,workplace:job.workplace||null,url:job.destination_url||job.apply_url,listing_url:job.listing_url||job.apply_url,destination_url:job.destination_url||null,posted_at:job.posted_at,seen_at:job.seen_at,source:job.provider,route:r.label,family:r.family,automatable:r.automatable,review:!job.match.auto_selectable,closest_role:job.match.closest_role,skills:job.match.overlap.slice(0,8),required_skills:(job.match.required_skills||[]).slice(0,8),missing_skills:(job.match.unverified_skills||[]).slice(0,8),minimum_years:job.match.minimum_years,experience_review:job.match.seniority_conflict||job.match.experience_review,fit:publicFit(job.match.fit)};});
    const checked=item.discovery.jobsFor(task).length,pending=Math.max(0,checked-task.semantic.size);
    const can_expand=!task.running&&task.request.limit<300&&task.rows.some(row=>row.has_more||row.count>=task.request.limit);
    const stop_reason=task.running?'searching':can_expand?'budget_reached':task.request.limit>=300&&task.rows.some(row=>row.stop_reason==='budget_reached'||row.count>=300)?'max_budget_reached':task.rows.some(row=>row.stop_reason==='throttled'||['throttled','cooling_down'].includes(row.state))?'throttled':'exhausted';

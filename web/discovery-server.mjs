@@ -39,7 +39,10 @@ export async function createDiscoveryServer({root=ROOT,directory=process.env.APP
  const planner=new Planner({store,dataDirectory:directory});
  if(process.env.APPLYBURST_PRELOAD_MODEL==='1')await encoder(directory);
  const origins=[publicOrigin,...(process.env.RAILWAY_PUBLIC_DOMAIN?['https://'+process.env.RAILWAY_PUBLIC_DOMAIN]:[]),...(process.env.APPLYBURST_EXTRA_ORIGINS||'').split(',').filter(Boolean)];
- const handler=publicDiscovery({root,store,search:combined,planner,base:'/applyburst',publicOrigin,publicOrigins:origins,maxRunning:2,maxTasks:60,pool});
+ // Optional pool-wide CV matcher: present only when a match index was built into the image (TAPSUBMIT_MATCH_INDEX).
+ const matchDir=process.env.TAPSUBMIT_MATCH_INDEX||join(root,'match-index');let matcher=null;
+ if(existsSync(join(matchDir,'manifest.json')))setTimeout(async()=>{try{const {Matcher}=await import('./lib/match/match.mjs');matcher=new Matcher({indexDir:matchDir,cacheDir:directory});}catch(error){console.error('match index unavailable:',error.message);}},0);
+ const handler=publicDiscovery({root,store,search:combined,planner,base:'/applyburst',publicOrigin,publicOrigins:origins,maxRunning:2,maxTasks:60,pool,matcher:()=>matcher});
  // The browser extension is paused; only the page assets are served.
  const assets={
   '/assets/discovery.js':['web/public/discovery.js','text/javascript; charset=utf-8'],
@@ -47,6 +50,11 @@ export async function createDiscoveryServer({root=ROOT,directory=process.env.APP
   '/assets/city-picker.mjs':['web/public/city-picker.mjs','text/javascript; charset=utf-8'],
   '/assets/tom-select.js':['web/public/vendor/tom-select/tom-select.min.js','text/javascript; charset=utf-8'],
   '/assets/tom-select.css':['web/public/vendor/tom-select/tom-select.min.css','text/css; charset=utf-8'],
+  '/assets/match-ui.mjs':['web/public/match-ui.mjs','text/javascript; charset=utf-8'],
+  '/assets/client-match.mjs':['web/public/client-match.mjs','text/javascript; charset=utf-8'],
+  '/assets/resume-reader.mjs':['web/public/resume-reader.mjs','text/javascript; charset=utf-8'],
+  '/assets/pdf.min.mjs':['web/public/vendor/pdfjs/pdf.min.mjs','text/javascript; charset=utf-8'],
+  '/assets/pdf.worker.min.mjs':['web/public/vendor/pdfjs/pdf.worker.min.mjs','text/javascript; charset=utf-8'],
  };
  const cache=new Map();
  // Cloudflare keeps /assets for hours whatever we send: every asset URL carries a content version, so a

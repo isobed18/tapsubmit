@@ -39,3 +39,20 @@
 .progress{display:none}
 @media(max-width:1000px){.results{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:640px){.results{grid-template-columns:minmax(0,1fr)}.source-column{height:460px}}
+
+/* Pool-wide match: percentage badge + "Why this match" (match-ui.mjs) */
+.match-badge{display:inline-block;font-size:.74rem;font-weight:600;padding:.1rem .5rem;border-radius:999px;margin:0 0 .3rem;border:1px solid var(--line)}
+.match-strong{background:var(--soft);color:var(--green)}
+.match-good{background:#f1f5ec;color:var(--green)}
+.match-possible{background:#f6efe6;color:#9b7448}
+.match-weak{background:#f6ecea;color:#ac413a}
+.match-why{font-size:.76rem;margin-top:.35rem;color:var(--ink)}
+.match-why summary{cursor:pointer;color:var(--green)}
+.match-dims{list-style:none;padding:0;margin:.3rem 0 0}
+.match-dims li{margin:.16rem 0;line-height:1.35}
+.dim-icon{display:inline-block;width:1.15em;font-weight:700}
+.dim-match .dim-icon{color:var(--green)}.dim-partial .dim-icon{color:#9b7448}.dim-gap .dim-icon{color:#ac413a}.dim-unknown .dim-icon{color:var(--muted)}
+.dim-detail{color:var(--muted)}
+.dim-has,.dim-missing,.dim-pref{display:block;margin-left:1.15em;color:var(--muted)}
+.dim-missing{color:#ac413a}
+.match-note{display:block;color:var(--muted);margin-top:.25rem}

@@ -2,6 +2,8 @@ import {resumeText} from './resume-reader.mjs';
 import {profileFeatures,sanitizeFeatures,ROLES,suggestedSearches} from './features.mjs';
 import {matchProfessionalTitles} from './professional.mjs';
 import {createCityPicker} from './city-picker.mjs';
+import {matchBadge,matchDetails} from './match-ui.mjs';
+import {computeClientFit} from './client-match.mjs';
 const $=id=>document.getElementById(id),BASE='/api/public/';
 const NAMES={indeed:'Indeed',himalayas:'Himalayas',remoteok:'Remote OK',jobicy:'Jobicy',remotive:'Remotive',arbeitnow:'Arbeitnow',boards:'Company careers',linkedin:'LinkedIn',glassdoor:'Glassdoor',google:'Google Jobs'};
 let features=null,titles=[],roles=[],vocabulary=null,sequence=0,limit=100,started=0,timer=null,manualCountry=false,taskId=null;
@@ -77,10 +79,26 @@ function sourceProgress(rows){
  for(const [site,s] of groups){const c=column(site);c.state.textContent=s.busy?'Searching…':s.failed?'Unavailable now':'Done';c.state.className='column-state '+(s.busy?'busy':s.failed?'failed':'done');}
  orderColumns();
 }
+// CV skills for matching, extracted here in the browser with the matcher's vocabulary; only the ids are sent.
+let skillMatcher=null,skillIds=[];
+async function cvSkillIds(text){
+ if(!skillMatcher){const[{SkillMatcher},vocab]=await Promise.all([import('./match-skills.mjs'),fetch(new URL('./match-vocab.json',import.meta.url)).then(r=>r.json())]);skillMatcher=new SkillMatcher(vocab);}
+ return[...new Set(skillMatcher.find(text).map(h=>h.id))];
+}
+// Match % badge + "Why this match" (explainable fit). A job's fit can arrive after its card (live sources are scored
+// in the background), so the card is updated in place and re-sorted by fit within its column.
+function setFit(card,fit){
+ if(!fit||card.dataset.fit===String(fit.percent))return;card.dataset.fit=String(fit.percent);
+ const main=card.firstChild;main.querySelector('.match-tag')?.remove();main.querySelector('.match-badge')?.remove();main.querySelector('.match-why')?.remove();
+ const badge=matchBadge(fit);if(badge)main.prepend(badge);const why=matchDetails(fit);if(why)main.append(why);
+ const list=card.parentElement;if(list){const after=[...list.children].find(other=>other!==card&&Number(other.dataset.fit??-1)<fit.percent);list.insertBefore(card,after||null);}
+}
 function addJobs(jobs){
  for(const job of jobs){
   let url;try{url=new URL(job.url);if(url.protocol!=='https:')continue;}catch{continue;}
-  url.hash='';const target=url.href;if(cards.has(job.id)||targets.has(target))continue;
+  url.hash='';const target=url.href;
+  const fit=job.fit||computeClientFit(job,{features,roles,titles});
+  if(cards.has(job.id)){if(fit)setFit(cards.get(job.id),fit);continue;}if(targets.has(target))continue;
   const card=node('article','','job-card'),main=node('div'),tag=node('span',job.review?'Check requirements':'Role match','match-tag');
   const title=node('a',job.title,'job-title');title.href=job.url;title.target='_blank';title.rel='noopener noreferrer';
   main.append(tag,node('br'),title,node('p',[job.company,job.location].filter(Boolean).join(' · '),'job-company'));
@@ -88,6 +106,7 @@ function addJobs(jobs){
   const open=node('a','↗','job-arrow');open.href=job.url;open.target='_blank';open.rel='noopener noreferrer';open.setAttribute('aria-label','Open '+job.title+' at '+(job.company||'employer website'));
   card.append(main,open);cards.set(job.id,card);targets.add(target);found.set(job.id,{id:job.id,title:job.title,company:job.company,location:job.location,workplace:job.workplace,url:target,provider:job.source});
   const c=column(siteOf(job.source));c.list.append(card);c.count++;
+  if(fit)setFit(card,fit);
  }
  orderColumns();$('result-count').textContent=cards.size.toLocaleString();
 }
@@ -100,6 +119,7 @@ async function readFile(file){
  try{
   const[text,entries]=await Promise.all([resumeText(file),loadVocabulary()]);
   if(seq!==sequence)return;features=sanitizeFeatures(profileFeatures(text));titles=matchProfessionalTitles(text,entries);
+  skillIds=await cvSkillIds(text).catch(()=>[]);
   // Literal titles miss specialists whose headline says "Software Engineer" but whose
   // repeated projects/skills identify AI, vision, or another field. Use the same local
   // professional signals as the app, and show every selected search direction as a chip.
@@ -126,7 +146,7 @@ async function search(expand=false){
  sourceProgress(sites.map(site=>({site,state:'searching'})));
  try{
   // The chips are the search: the roles shown are exactly the roles searched.
-  const response=await fetch(BASE+'search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'',titles,queries:roles.length?roles:undefined,features:{...(features||profileFeatures(roles.join('\n'))),country:mode==='anywhere'?'worldwide':$('country').value||'worldwide',remote:mode==='remote_only'},location:local?cities.join('; '):'',work_mode:mode,sites,limit,hours_old:Number($('hours').value)})});
+  const response=await fetch(BASE+'search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:'',titles,skill_ids:skillIds.slice(0,60),queries:roles.length?roles:undefined,features:{...(features||profileFeatures(roles.join('\n'))),country:mode==='anywhere'?'worldwide':$('country').value||'worldwide',remote:mode==='remote_only'},location:local?cities.join('; '):'',work_mode:mode,sites,limit,hours_old:Number($('hours').value)})});
   const task=await response.json();if(!response.ok)throw new Error(task.error||'Search could not start.');if(seq!==sequence)return;
   taskId=task.id;if(!roles.length&&task.queries?.length){roles=task.queries.slice(0,6);renderRoles();}
   for(let poll=0;poll<240&&seq===sequence;poll++){
