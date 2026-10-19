@@ -51,7 +51,7 @@ export class PublicPool{
   const country=!cities.length&&filters.country&&filters.country!=='worldwide'?countryTerms(filters.country).map(terms).filter(t=>t.length):[];
   if(country.length&&filters.workplace!=='remote')match+=' AND location:('+country.map(c=>'('+c.map(quote).join(' ')+')').join(' OR ')+(filters.include_remote?' OR "remote"':'')+')';
   if(cities.length&&!filters.include_remote&&filters.workplace!=='remote')match+=' AND location:('+cities.map(c=>'('+c.map(quote).join(' ')+')').join(' OR ')+')';
-  const rows=this.db.prepare('SELECT p.id,p.j FROM f JOIN p ON p.n=f.rowid WHERE f MATCH ? ORDER BY p.posted DESC NULLS LAST LIMIT ?').all(match,Math.min(5000,limit*5));
+  const rows=this.db.prepare('SELECT p.id,p.j FROM p JOIN (SELECT p.n FROM f JOIN p ON p.n=f.rowid WHERE f MATCH ? ORDER BY p.posted DESC NULLS LAST LIMIT ?) s ON s.n=p.n ORDER BY p.posted DESC NULLS LAST').all(match,Math.min(5000,limit*5));
   const providers=filters.providers?new Set(filters.providers):null,results=[];
   for(const row of rows){
    const j=unpack(row.id,row.j);if(providers&&!providers.has(j.provider))continue;

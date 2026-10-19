@@ -12,4 +12,4 @@ COPY public-pool/jobs-0001.jsonl.gz public-pool/manifest.json ./public-pool/
 COPY scripts/build_public_pool_index.mjs ./scripts/build_public_pool_index.mjs
 RUN node --no-warnings scripts/build_public_pool_index.mjs
 ENV NODE_ENV=production APPLYBURST_DATA=/data APPLYBURST_MODEL_CACHE=/data/models APPLYBURST_PRELOAD_MODEL=1 APPLYBURST_INFERENCE_THREADS=1 OMP_NUM_THREADS=1 TOKENIZERS_PARALLELISM=false
-CMD ["node", "--max-old-space-size=320", "web/discovery-server.mjs"]
+CMD ["node", "--max-old-space-size=768", "web/discovery-server.mjs"]
