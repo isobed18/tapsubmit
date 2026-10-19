@@ -26,7 +26,7 @@ function updateLocation(){
  cityPicker.update({country:$('country').value,visible:local,values:cities});remember();
 }
 // Sharing found jobs is opt-in, remembered only in this browser.
-const sharing=()=>$('share-pool').checked;
+const sharing=()=>!!$('share-pool')?.checked;
 async function shareFound(){
  if(!sharing()||!found.size)return;const jobs=[...found.values()];found.clear();
  for(let i=0;i<jobs.length;i+=200)try{await fetch(BASE+'pool/contribute',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({consent:true,jobs:jobs.slice(i,i+200)})});}catch{}
@@ -153,8 +153,8 @@ $('privacy-toggle').addEventListener('click',()=>{$('privacy-detail').hidden=!$(
 $('country').addEventListener('change',()=>{manualCountry=true;updateLocation();});
 $('work-mode').addEventListener('change',()=>{renderCountries();});$('more').addEventListener('click',()=>search(true));
 $('share-toggle').addEventListener('click',()=>{$('share-detail').hidden=!$('share-detail').hidden;});
-try{$('share-pool').checked=localStorage.getItem('tapsubmit:share-pool')==='1';}catch{}
-$('share-pool').addEventListener('change',()=>{try{localStorage.setItem('tapsubmit:share-pool',sharing()?'1':'0');}catch{}if(sharing())shareFound();});
+try{if($('share-pool'))$('share-pool').checked=localStorage.getItem('tapsubmit:share-pool')==='1';}catch{}
+$('share-pool')?.addEventListener('change',()=>{try{localStorage.setItem('tapsubmit:share-pool',sharing()?'1':'0');}catch{}if(sharing())shareFound();});
 try{
  const response=await fetch(BASE+'config');if(!response.ok)throw new Error('Could not load job sources. Please reload.');const config=await response.json();
  countries=config.countries;try{const saved=JSON.parse(localStorage.getItem('tapsubmit:location')||'{}');if(saved.work_mode)$('work-mode').value=saved.work_mode;if(saved.country)savedCountry=saved.country;if(Array.isArray(saved.cities))cities=saved.cities;}catch{}renderCountries();

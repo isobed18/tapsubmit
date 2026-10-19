@@ -346,7 +346,9 @@ async def execute(page, job, request, emit, mode):
                 'note': 'Preparation exceeded the fast-lane budget. No final click; review or retry this job separately.'}
 
 
-async def location_policy_blocker(page, job, request):
+async def location_policy_blocker(page, job, request, mode='auto'):
+    if mode != 'auto':
+        return None
     policy = request.get('search_policy') or {}
     if policy.get('work_mode') != 'remote_only':
         return None
@@ -360,7 +362,10 @@ async def location_policy_blocker(page, job, request):
         pass
     text = await page.locator('body').inner_text(timeout=3000)
     if re.search(r'\b(?:hybrid|hibrit|on[- ]site|onsite)\b', title, re.I) or re.search(r'\bhybrid (?:role|position|work(?:ing)? (?:model|arrangement))\b|\b(?:in[- ]office|on[- ]site)\s+(?:at least )?\d\s+days?\s+(?:per |a )?week|çalışma modeli\s*[:–-]\s*hibrit', text[:20000], re.I):
+        job['workplace'] = 'hybrid' if re.search(r'\b(?:hybrid|hibrit)\b', text[:20000], re.I) else 'onsite'
         return {'state': 'policy_mismatch', 'note': 'The employer page says hybrid/onsite, but you selected remote-only. Nothing sent.'}
+    if re.search(r'\b(?:remote|uzaktan)\b', title, re.I) or re.search(r'\b(?:remote|uzaktan çalışma|çalışma modeli\s*[:–-]\s*uzaktan)\b', text[:20000], re.I):
+        job['workplace'] = 'remote'
     return None
 
 
@@ -507,7 +512,7 @@ async def _execute(page, job, request, emit, mode, deadline):
                     return done({'state': 'plan_changed', 'plan_hash': digest, 'disclosure': disclosure(entries),
                                  'note': 'The form or its values differ from the reviewed plan. Review again; nothing was submitted.'})
                 before = await adapter.snapshot(page, scope)
-                mismatch = await location_policy_blocker(page, job, request)
+                mismatch = await location_policy_blocker(page, job, request, mode)
                 if mismatch:
                     return done(mismatch)
                 before['_messages'] = set(await visible_messages(page, scope))
@@ -516,7 +521,7 @@ async def _execute(page, job, request, emit, mode, deadline):
                 # Stop the preparation deadline BEFORE requesting intent. Once a final click
                 # might be authorized, only the normal confirmed/unknown protocol applies.
                 deadline.reschedule(None)
-                if not await emit_intent(request, job, digest,disclosure=fields,family=family,destination=scope_url if isinstance(scope_url,str) else page.url):
+                if not await emit_intent(request, job, digest,disclosure=fields,family=family,destination=scope_url if isinstance(scope_url,str) else page.url,workplace=job.get('workplace')):
                     return done({'state': 'failed_before_submit', 'note': getattr(request['_channel'],'denials',{}).get(job['id']) or 'The submission was not recorded first, so the final button was not clicked.'})
                 timings['durable_ack']=(time.perf_counter()-stage)*1000
                 submitted = True

@@ -19,6 +19,7 @@ for(let a=65;a<=90;a++)for(let b=65;b<=90;b++){const code=String.fromCharCode(a,
 export function workArrangement(job){
  const head=[job.title,job.location,job.workplace].filter(Boolean).join(' '),description=String(job.description||'');
  if(/\b(?:hybrid|hibrit|hybride|hibrido)\b/i.test(head)||/\bhybrid (?:role|position|working|work model|work arrangement)|(?:work(?:ing)? (?:model|arrangement)|çalışma modeli)\s*[:–-]\s*(?:hybrid|hibrit)|\b(?:in[- ]office|on[- ]site)\s+(?:at least )?\d\s+days?\s+(?:per |a )?week/i.test(description))return'hybrid';
+ if(/\b(?:remote|uzaktan|remoto|télétravail)\b/i.test(head)||/\b(?:remote (?:role|position|working|work model|work arrangement)|(?:work(?:ing)? (?:model|arrangement)|çalışma modeli)\s*[:–-]\s*(?:remote|uzaktan)|100%\s*remote)\b/i.test(description))return'remote';
  if(/\b(?:on[- ]site|onsite|yerinde)\b/i.test(head))return'onsite';
  return job.workplace||'unknown';
 }

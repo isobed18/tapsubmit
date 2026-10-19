@@ -24,7 +24,7 @@ const S={
 };
 let toastTimer;
 const cityPicker=createCityPicker({onChange:values=>{$('#city-choice').value=values.join('; ');$('#location').value=$('#city-choice').value;remember({location:$('#city-choice').value});S.previewEdited=true;if(!running(S.feed?.run))setSearchStatus('ready');},onError:toast});
-const reviewSettings=createReviewSettings({api,toast,onChange:enabled=>{if(S.boot)S.boot.local_drafts_enabled=enabled;for(const entry of S.cards.values())if(entry.card.stage==='needs_you'){entry.key='';paint(entry);}},onPreferences:async result=>{S.preferences=result.preferences;remember(result.search_policy||{});const policy=result.search_policy||{};if(policy.country)$('#country').value=policy.country;if(policy.work_mode)$('#work-mode').value=policy.work_mode;$('#city-choice').value=policy.location||'';$('#location').value=policy.location||'';$('#remote').checked=!!policy.remote;renderCountries();await Promise.all([renderSaved(),renderFacts()]);renderScreeningPreferences();syncExtensionProfile();}});
+const reviewSettings=createReviewSettings({api,toast,onChange:enabled=>{if(S.boot)S.boot.local_drafts_enabled=enabled;for(const entry of S.cards.values())if(entry.card.stage==='needs_you'){entry.key='';paint(entry);}},onPreferences:async result=>{S.preferences=result.preferences;remember(result.search_policy||{});const policy=result.search_policy||{};if(policy.country&&$('#country'))$('#country').value=policy.country;if(policy.work_mode&&$('#work-mode'))$('#work-mode').value=policy.work_mode;if($('#city-choice'))$('#city-choice').value=policy.location||'';if($('#location'))$('#location').value=policy.location||'';if($('#remote'))$('#remote').checked=!!policy.remote;renderCountries();await Promise.all([renderSaved(),renderFacts()]);renderScreeningPreferences();syncExtensionProfile();}});
 
 // A quick first pass per source and query; "Keep searching" deepens from the saved cursors.
 const FIRST_DEPTH=25,DEPTHS=[25,50,100,200];
@@ -307,7 +307,7 @@ function updateLocationControls(){
  $('#country-wrap').hidden=!mode||mode==='anywhere';$('#country-label').textContent=local?'Country':'Eligible in';
  if(mode==='anywhere')$('#country').value='worldwide';
  cityPicker.update({country:$('#country').value,visible:local,values:$('#city-choice').value.split(/[;|]/).map(v=>v.trim()).filter(Boolean)});
- $('#remote').checked=mode==='remote_only';
+ if($('#remote'))$('#remote').checked=mode==='remote_only';
 }
 
 // ---- Settings & Member Controls --------------------------------------------------------------------
@@ -344,12 +344,12 @@ function renderSettings(){
  $('#job-languages').querySelectorAll('label').forEach(node=>node.remove());
  const languages=new Set(Array.isArray(s.languages)?s.languages:activeProfile()?.languages||[]);
  for(const [id,name]of b.languages||[]){const label=el('label','check'),box=el('input');box.type='checkbox';box.value=id;box.checked=languages.has(id);label.append(box,document.createTextNode(name));$('#job-languages').append(label);}
- $('#hours').value=String(s.hours_old??168);$('#limit').value=String(s.limit||100);$('#location').value=s.location||'';$('#remote').checked=!!s.remote;$('#fresh').checked=!!s.force;$('#signed').checked=s.signed===undefined?!!S.boot?.sessions?.linkedin?.signed_in:!!s.signed;$('#easy').checked=!!s.easy;
+ if($('#hours'))$('#hours').value=String(s.hours_old??168);if($('#limit'))$('#limit').value=String(s.limit||100);if($('#location'))$('#location').value=s.location||'';if($('#remote'))$('#remote').checked=!!s.remote;if($('#fresh'))$('#fresh').checked=!!s.force;if($('#signed'))$('#signed').checked=s.signed===undefined?!!S.boot?.sessions?.linkedin?.signed_in:!!s.signed;if($('#easy'))$('#easy').checked=!!s.easy;
  $('#targets').querySelectorAll('label').forEach(node=>node.remove());
  for(const [site,name]of Object.entries(SITE_NAME)){const label=el('label','check'),box=el('input');box.type='checkbox';box.value=site;box.checked=!!b.permissions.sites[site];label.append(box,document.createTextNode(name));$('#targets').append(label);}
  $('#run-cap').value=s.application_limit||10;$('#daily-cap').value=b.permissions.daily_cap;$('#concurrency').value=String(b.pace.concurrency||2);$('#linkedin-pace').value=b.pace.linkedin_apply_seconds||4;
  if($('#full-auto-toggle'))$('#full-auto-toggle').checked=S.profile==='full_auto';
- $('#windows').checked=!!b.show_browser_windows;
+ if($('#windows'))$('#windows').checked=!!b.show_browser_windows;
  renderConsents();renderAccounts();
 }
 function renderConsents(){
@@ -363,7 +363,7 @@ function renderConsents(){
  }
 }
 function saveSearchSettings(){
- remember({sites:[...document.querySelectorAll('#sites input:checked')].map(box=>box.value),...(S.boot?.languages?{languages:[...document.querySelectorAll('#job-languages input:checked')].map(box=>box.value)}:{}),hours_old:Number($('#hours').value),limit:Number($('#limit').value),location:$('#location').value.trim(),remote:$('#remote').checked,force:$('#fresh').checked,signed:$('#signed').checked,easy:$('#easy').checked});
+ remember({sites:[...document.querySelectorAll('#sites input:checked')].map(box=>box.value),...(S.boot?.languages?{languages:[...document.querySelectorAll('#job-languages input:checked')].map(box=>box.value)}:{}),hours_old:Number($('#hours')?.value||168),limit:Number($('#limit')?.value||100),location:$('#location')?.value.trim()||'',remote:!!$('#remote')?.checked,force:!!$('#fresh')?.checked,signed:!!$('#signed')?.checked,easy:!!$('#easy')?.checked});
  remember({work_mode:$('#work-mode').value});
 }
 async function saveApplySettings(){
@@ -372,7 +372,7 @@ async function saveApplySettings(){
   const sites=Object.fromEntries([...document.querySelectorAll('#targets input')].map(box=>[box.value,box.checked]));
   S.boot.permissions=await api('settings/permissions',{sites,daily_cap:Number($('#daily-cap').value)||25});
   S.boot.pace={...S.boot.pace,...await api('settings/pace',{concurrency:Number($('#concurrency').value),linkedin_apply_seconds:Number($('#linkedin-pace').value),confirm_timeout:S.boot.pace.confirm_timeout})};
-  await api('settings/windows',{show:$('#windows').checked});S.boot.show_browser_windows=$('#windows').checked;
+  await api('settings/windows',{show:!!$('#windows')?.checked});S.boot.show_browser_windows=!!$('#windows')?.checked;
   if(['controlled_auto','full_auto'].includes(S.profile)){
    const desired=$('#full-auto-toggle')?.checked?'full_auto':'controlled_auto';
    if(desired!==S.profile)await chooseProfile(desired);
@@ -470,7 +470,7 @@ async function saveScreeningPreferences(event){
 let poolTimer=null;
 async function renderPool(data=null){
  data=data||await api('pool');const local=data.local,remote=data.remote,dl=data.download||{};
- $('#pool-share').checked=!!data.share;$('#pool-use').checked=!!data.use_pool;$('#pool-use').disabled=!local;
+ if($('#pool-share'))$('#pool-share').checked=!!data.share;if($('#pool-use')){$('#pool-use').checked=!!data.use_pool;$('#pool-use').disabled=!local;}
  const busy=['downloading','indexing'].includes(dl.state);$('#pool-download').disabled=busy;$('#pool-download').textContent=local?'Update download':'Download & use for my searches';
  $('#pool-status-label').textContent='Shared pool'+(remote?.records?' · '+remote.records.toLocaleString('en-US')+' active jobs on tapsubmit.com':'');
  $('#pool-status-note').textContent=busy?(dl.state==='downloading'?'Downloading'+(dl.bytes?' '+Math.round(dl.bytes/1e6)+' MB':'')+'…':'Building the local search index…'):dl.state==='failed'?dl.error:local?local.records.toLocaleString('en-US')+' jobs downloaded'+(local.generated_at?' · '+new Date(local.generated_at).toLocaleDateString():''):remote?'Not downloaded. We collect these jobs and search them for you.':'tapsubmit.com is not reachable right now.';
@@ -699,7 +699,7 @@ function stageText(card){
  if(card.stage==='needs_you'&&card.app_state==='needs_login')return{...base,text:'Needs review · Sign in'};
  if(card.stage==='needs_you'&&card.app_state==='needs_human_verification')return{...base,text:'Needs review · Verify'};
  if(card.stage==='needs_you'&&card.missing)return{...base,text:card.missing===1?'Needs review · 1 question':'Needs review · '+card.missing+' questions'};
- if(card.stage==='skipped')return{...base,text:'Skipped · '+(REASON[card.app_state]||card.app_state||'')};
+ if(card.stage==='skipped')return{...base,text:'Skipped · '+(card.note||REASON[card.app_state]||card.app_state||'')};
  if(card.stage==='confirmed'&&card.earlier)return{...base,text:'Applied'};
  return base;
 }
@@ -723,8 +723,8 @@ function paint(entry){
  node.querySelector('.state-icon').textContent=meta.icon;node.querySelector('.state-text').textContent=meta.text;
  node.querySelectorAll('.card-review,.card-questions').forEach(n=>n.remove());
  const extra=node.querySelector('.card-extra');extra.replaceChildren();
- if(card.why)extra.append(el('small','card-why',card.why));
- else if(card.note&&!['confirmed','filling','opening','sending','ready'].includes(card.stage))extra.append(el('small','card-why',card.note));
+ const reasonText=card.note||card.why;
+ if(reasonText&&!['confirmed','filling','opening','sending','ready'].includes(card.stage))extra.append(el('small','card-why',reasonText));
  // Match strength from the encoder's calibrated cut-offs (same occupation / near / related), not a fake percentage.
  if(card.role&&['matched','related','queued','manual'].includes(card.stage)){const strength=card.fit==null?'Match':card.fit>=0.8?'Strong match':card.fit>=0.62?'Good match':'Related';extra.append(el('small','card-role fit-'+strength.split(' ')[0].toLowerCase(),strength+' · '+card.role));}
  if(card.stage==='confirmed'&&card.evidence?.text)extra.append(el('small','card-evidence','Confirmed: “'+card.evidence.text+'”'));
@@ -1419,7 +1419,7 @@ try{
   if(!requireAuth('Sign in or create an account to manage settings and connected accounts.',()=>$('#open-settings').click()))return;
   renderSettings();$('#settings').showModal();try{await Promise.all([renderFacts(),renderSaved(),reviewSettings.load(),renderPool()]);}catch(error){toast(error.message);}
  });
- for(const id of ['pool-share','pool-use'])$('#'+id).addEventListener('change',async()=>{try{await renderPool(await api('pool',{share:$('#pool-share').checked,use_pool:$('#pool-use').checked}));toast($('#pool-share').checked&&id==='pool-share'?'Found jobs will be shared after each search (public job details only).':'Saved.');}catch(error){toast(error.message);}});
+ for(const id of ['pool-share','pool-use'])$('#'+id)?.addEventListener('change',async()=>{try{await renderPool(await api('pool',{share:!!$('#pool-share')?.checked,use_pool:!!$('#pool-use')?.checked}));toast($('#pool-share')?.checked&&id==='pool-share'?'Found jobs will be shared after each search (public job details only).':'Saved.');}catch(error){toast(error.message);}});
  $('#pool-download').addEventListener('click',async()=>{try{await renderPool(await api('pool/download',{}));}catch(error){toast(error.message);}});
  $('#settings').addEventListener('change',event=>{if(event.target.closest('#sites')||event.target.closest('#job-languages')||['hours','limit','location','remote','fresh','signed','easy'].includes(event.target.id))saveSearchSettings();});
  $('#save-apply').addEventListener('click',saveApplySettings);$('#save-facts').addEventListener('click',saveFacts);

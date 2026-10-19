@@ -60,11 +60,16 @@ def linkedin_cards(html):
         if not ident:
             continue
         posted = card.select_one('time')
+        card_raw = text(card)
+        wp = ('hybrid' if re.search(r'\b(?:hybrid|hibrit)\b', card_raw, re.I)
+              else 'remote' if re.search(r'\b(?:remote|uzaktan)\b', card_raw, re.I)
+              else 'onsite' if re.search(r'\b(?:on[- ]site|onsite|yerinde|iş yerinde)\b', card_raw, re.I)
+              else 'unknown')
         jobs.append({'external_id': ident, 'title': text(card.select_one('.base-search-card__title')),
                      'company': text(card.select_one('.base-search-card__subtitle')), 'location': text(card.select_one('.job-search-card__location')),
                      'posted_at': posted.get('datetime') if posted else None, 'listing_url': f'https://www.linkedin.com/jobs/view/{ident}/',
                      'apply_url': f'https://www.linkedin.com/jobs/view/{ident}/', 'description': '', 'description_state': 'card_only',
-                     'easy_apply_badge': 'easy apply' in text(card).lower()})
+                     'easy_apply_badge': 'easy apply' in card_raw.lower(), 'workplace': wp})
     return jobs
 
 
@@ -121,6 +126,8 @@ async def linkedin(request, report):
             cards = cards[:limit - len(order)]
             for card in cards:
                 card['apply_route'] = 'linkedin_easy_apply' if request.get('easy_apply') else 'unknown'
+                if request.get('remote') and card.get('workplace') == 'unknown':
+                    card['workplace'] = 'remote'
                 found[card['external_id']] = card
                 order.append(card['external_id'])
             emit({'type': 'jobs', 'jobs': cards, 'phase': 'search', 'page': pages})

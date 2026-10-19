@@ -20,7 +20,7 @@ async function search(limit=100){
  const sites=selectedSources();if(!sites.length){$('#error').textContent='Choose at least one job source.';return;}
  const seq=++sequence,cards=new Map();currentLimit=limit;$('#error').textContent='';$('#results').replaceChildren();$('#source-progress').replaceChildren();$('#more').hidden=true;$('#search-again').hidden=true;$('#status').textContent='Searching selected sources…';
  try{
-  const response=await fetch('/applyburst/api/public/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titles,features:{...features,country:$('#country').value,remote:$('#remote').checked},sites,limit})}),task=await response.json();
+  const response=await fetch('/applyburst/api/public/search',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({titles,features:{...features,country:$('#country')?.value||'worldwide',remote:!!$('#remote')?.checked},sites,limit})}),task=await response.json();
   if(!response.ok)throw new Error(task.error);if(seq!==sequence)return;
   setTags(task.titles);$('#queries').textContent='Searching: '+task.queries.join(' · ');
   for(let tries=0;tries<170&&seq===sequence;tries++){
