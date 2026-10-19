@@ -1,5 +1,5 @@
 import {resumeText} from './resume-reader.mjs';
-import {profileFeatures,sanitizeFeatures} from './features.mjs';
+import {profileFeatures,sanitizeFeatures,ROLES,suggestedSearches} from './features.mjs';
 import {matchProfessionalTitles} from './professional.mjs';
 import {createCityPicker} from './city-picker.mjs';
 const $=id=>document.getElementById(id),BASE='/api/public/';
@@ -99,7 +99,14 @@ async function readFile(file){
  if(!file)return;const seq=++sequence;error('');$('resume-label').textContent='Reading your CV…';
  try{
   const[text,entries]=await Promise.all([resumeText(file),loadVocabulary()]);
-  if(seq!==sequence)return;features=sanitizeFeatures(profileFeatures(text));titles=matchProfessionalTitles(text,entries);roles=titles.slice(0,6);renderRoles();
+  if(seq!==sequence)return;features=sanitizeFeatures(profileFeatures(text));titles=matchProfessionalTitles(text,entries);
+  // Literal titles miss specialists whose headline says "Software Engineer" but whose
+  // repeated projects/skills identify AI, vision, or another field. Use the same local
+  // professional signals as the app, and show every selected search direction as a chip.
+  const byKey=new Map(entries.map(entry=>[fold(entry.title),entry.title]));
+  const signals=features.roles.map(id=>ROLES.find(role=>role.id===id)?.query).filter(Boolean).map(query=>byKey.get(fold(query))||query);
+  const internships=features.level==='early'?suggestedSearches(features).filter(query=>/\bintern\b/i.test(query)).map(query=>byKey.get(fold(query))||query):[];
+  roles=[...new Map([...signals,...internships,...titles].map(title=>[fold(title),title])).values()].slice(0,6);renderRoles();
   if(!manualCountry&&features.country&&[...$('country').options].some(o=>o.value===features.country)){$('country').value=features.country;updateLocation();}
   $('resume-label').textContent=file.name;$('resume-note').textContent='Ready · review the roles, choose where you can work, then press Find jobs';if(!$('work-mode').value)$('work-mode').focus();
  }catch(e){if(seq===sequence){$('resume-label').textContent='Choose another CV';error(e.message);}}

@@ -290,6 +290,28 @@ class Ashby(Adapter):
         return data
 
 
+class BambooHR(Adapter):
+    family = 'bamboohr'
+    domains = ('bamboohr.com',)
+    submit_patterns = [r'^submit application$', r'^submit your application$', r'^submit$', r'^send application$']
+
+    async def open(self, page, job):
+        # The hosted career page mounts its application after an explicit Apply action.
+        # Only that action opens the form; the final Submit button belongs to execute().
+        for _ in range(48):
+            blocked = await self.blocker(page)
+            if blocked:
+                return {'blocked': blocked}
+            if await page.locator('input[name="firstName"]').count():
+                forms = page.locator('form').filter(has=page.locator('input[name="firstName"]'))
+                return forms.first if await forms.count() else page
+            action = await button(page, [r'^apply for this job$', r'^apply now$', r'^apply$'])
+            if action:
+                await action.click(timeout=3000)
+            await page.wait_for_timeout(250)
+        return None
+
+
 class Workable(Adapter):
     family = 'workable'
     domains = ('apply.workable.com',)
@@ -361,13 +383,24 @@ class LinkedIn(Adapter):
 
     async def open(self, page, job):
         # English or Turkish UI; the 2026 button is named by aria-label ("Bu işe kolay başvuru yapın").
-        easy = await first_visible(page.get_by_role('button', name=self.easy_name))
-        if not easy:
-            easy = await first_visible(page.locator('button.jobs-apply-button').filter(has_text=self.easy_name))
-        if not easy:
+        easy = None
+        for attempt in range(40):
+            easy = await first_visible(page.get_by_role('button', name=self.easy_name))
+            if not easy:
+                easy = await first_visible(page.locator('button.jobs-apply-button').filter(has_text=self.easy_name))
+            if easy:
+                break
             offsite = await button(page, [r'^apply( on company (website|site))?( to .*)?$', r'^başvur$', r'şirket (web )?sitesinde başvur']) or await first_visible(page.get_by_role('link', name=re.compile(r'^(apply|başvur)( on company (website|site))?$', re.I)))
             if offsite:
                 return {'offsite': offsite}
+            if attempt % 5 == 0:
+                blocked = await self.blocker(page)
+                if blocked:
+                    return {'blocked': blocked}
+            # DOMContentLoaded precedes the React job header. An absent Apply button
+            # on that first frame is not evidence that the job has no application.
+            await page.wait_for_timeout(200)
+        if not easy:
             return None
         await easy.click()
         dialog = page.get_by_role('dialog').filter(has=page.locator('input, select, textarea, [role=combobox], button'))
@@ -616,7 +649,7 @@ class JobBoard(Adapter):
         return {'blocked': {'state': 'unsupported_site', 'note': 'No unambiguous application link was found on this job page. Open it to review.'}}
 
 
-ADAPTERS = [LinkedIn(), Indeed(), Glassdoor(), Greenhouse(), Lever(), Ashby(), Workable(),
+ADAPTERS = [LinkedIn(), Indeed(), Glassdoor(), Greenhouse(), Lever(), Ashby(), Workable(), BambooHR(),
             JobBoard('himalayas', ('himalayas.app',)), JobBoard('remoteok', ('remoteok.com',)),
             JobBoard('jobicy', ('jobicy.com',)), JobBoard('remotive', ('remotive.com', 'remotive.io')),
             JobBoard('arbeitnow', ('arbeitnow.com',)), JobBoard('google', ('google.com',))]

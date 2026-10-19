@@ -50,6 +50,7 @@ const JOB_BOARDS=new Set(['linkedin','indeed','glassdoor','ziprecruiter','wellfo
 export function applyRoute(job){
  if(process.env.APPLYBURST_DEMO_FIXTURES==='1'&&job.fixture_family&&/^http:\/\/127\.0\.0\.1:\d+\//.test(job.apply_url))return{route:'fixture',family:job.fixture_family,label:'Local test employer · '+job.fixture_family,automatable:true,login:null};
  const targetSite=siteForURL(job.destination_url||job.apply_url);
+ if(targetSite?.id==='bamboohr')return{route:'ats',family:'bamboohr',label:'BambooHR form · review before submitting',automatable:false,inspectable:true,login:null};
  if(['greenhouse','lever','ashby','workable'].includes(targetSite?.id))return{route:'ats',family:targetSite.id,label:targetSite.name+' form',automatable:true,login:null};
  if(targetSite?.id==='indeed')return{route:'indeed',family:'indeed',label:'Indeed Apply',automatable:true,login:'indeed'};
  if(targetSite?.id==='glassdoor')return{route:'glassdoor',family:'glassdoor',label:'Glassdoor Apply',automatable:true,login:'glassdoor'};

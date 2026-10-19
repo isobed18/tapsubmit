@@ -20,7 +20,7 @@ SCAN = r'''(root) => {
  const shown = el => { if (!el || !el.isConnected) return false; const st = getComputedStyle(el);
   if (st.display === 'none' || st.visibility === 'hidden') return false; const r = el.getBoundingClientRect(); return r.width > 1 && r.height > 1; };
  const proxyShown = el => shown(el) || [...(el.labels || [])].some(shown) || shown(el.closest('label')) || shown(el.parentElement);
- const CONTAINER = 'fieldset,[role=radiogroup],[role=group],.application-question,.ashby-application-form-field-entry,.field-wrapper,[data-test-form-element],.fb-dash-form-element,.jobs-easy-apply-form-element,.form-group,.form-field,[data-ab-question]';
+ const CONTAINER = 'fieldset,[role=radiogroup],[role=group],.application-question,.ashby-application-form-field-entry,.field-wrapper,[data-test-form-element],.fb-dash-form-element,.jobs-easy-apply-form-element,.form-group,.form-field,[data-ab-question],[data-fabric-component="FileUpload"]';
  const TITLE = 'legend,.application-label,.ashby-application-form-question-title,[data-test-form-builder-radio-button-form-component__title],.fb-dash-form-element__label,.label,label';
  let counter = Number(doc.documentElement.dataset.applyburstCounter || 0);
  const keyOf = el => { if (!el.dataset.applyburstKey) el.dataset.applyburstKey = 'k' + (++counter); return el.dataset.applyburstKey; };
@@ -77,7 +77,7 @@ SCAN = r'''(root) => {
  for (const el of controls) {
   const type = (el.getAttribute('type') || (el.tagName === 'SELECT' ? 'select' : el.tagName === 'TEXTAREA' ? 'textarea' : 'text')).toLowerCase();
   if (['hidden', 'submit', 'button', 'reset', 'image'].includes(type) || el.disabled) continue;
-  const role = el.getAttribute('role');
+  const role = el.getAttribute('role') === 'combobox' || el.getAttribute('aria-autocomplete') === 'list' ? 'combobox' : el.getAttribute('role');
   if (!el.id && !el.name && type !== 'file' && role !== 'combobox' && type !== 'radio' && type !== 'checkbox') continue;
   if (el.closest('[aria-hidden=true]') && type !== 'file') continue;
   if (el.closest('.ashby-application-form-input-yesno')) continue;
@@ -98,7 +98,10 @@ SCAN = r'''(root) => {
    continue;
   }
   if (type !== 'file' && !proxyShown(el)) continue;
-  const text = ownLabel(el) || title(box, el, false) || clean(el.getAttribute('placeholder')) || clean(el.name || el.id);
+  let text = ownLabel(el) || title(box, el, false) || clean(el.getAttribute('placeholder')) || clean(el.name || el.id);
+  // Some accessible upload widgets name every input "file-input". The adjacent
+  // field heading distinguishes Resume from Cover Letter; never reuse the CV for both.
+  if (type === 'file' && /^(file[- ]?input|upload|choose file|attach)$/i.test(text)) text = title(box, el, false) || text;
   const q = {key: keyOf(el), kind: role === 'combobox' ? 'combobox' : type === 'select' ? 'select' : type === 'checkbox' ? 'checkbox' : type, label: text,
    required: required(el, box, text), name: el.name || '', id: el.id || '', autocomplete: el.getAttribute('autocomplete') || '', placeholder: clean(el.getAttribute('placeholder')),
    group: clean(el.closest('fieldset')?.querySelector('legend')?.innerText || ''), error: errorText(box, el), options: null, value: ''};

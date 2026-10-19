@@ -4,7 +4,7 @@ import {dirname} from 'node:path';
 const origin=(process.argv[2]||'http://127.0.0.1:53358').replace(/\/$/,''),output=process.argv[3];
 const checks=[];
 for(const[path,expected,method]of [
- ['/',200,'GET'],['/applyburst/',200,'GET'],['/healthz',200,'GET'],['/api/public/config',200,'GET'],['/api/public/vocabulary',200,'GET'],['/assets/discovery.js',200,'GET'],['/assets/discovery.css',200,'GET'],['/assets/resume-reader.mjs',200,'GET'],['/assets/pdf.min.mjs',200,'GET'],['/assets/pdf.worker.min.mjs',200,'GET'],['/download/extension',200,'GET'],
+ ['/',200,'GET'],['/applyburst/',200,'GET'],['/healthz',200,'GET'],['/api/public/config',200,'GET'],['/api/public/vocabulary',200,'GET'],['/api/public/pool/stats',200,'GET'],['/assets/discovery.js',200,'GET'],['/assets/discovery.css',200,'GET'],['/assets/city-picker.mjs',200,'GET'],['/assets/tom-select.js',200,'GET'],['/assets/tom-select.css',200,'GET'],['/assets/resume-reader.mjs',200,'GET'],['/assets/pdf.min.mjs',200,'GET'],['/assets/pdf.worker.min.mjs',200,'GET'],['/download/extension',404,'GET'],
  ['/api/register',404,'POST'],['/api/login',404,'POST'],['/api/profile',404,'POST'],['/api/browser',404,'POST'],['/api/extension/sync',404,'GET'],['/api/extension/event',404,'POST'],['/api/applications/prepare-one',404,'POST'],['/api/applications/submit-one',404,'POST'],['/applyburst/api/register',404,'POST'],['/applyburst/api/extension/sync',404,'GET'],
 ]){
  const tick=performance.now(),r=await fetch(origin+path,{method,redirect:'follow',headers:method==='POST'?{'Content-Type':'application/json',Origin:origin}:undefined,body:method==='POST'?'{}':undefined,signal:AbortSignal.timeout(30000)});

@@ -39,7 +39,7 @@ import {greenhouseSchema} from '../demo/lib/form-schema.mjs';
 
 const ROOT=fileURLToPath(new URL('..',import.meta.url));
 const LOGIN_SITES={linkedin:'LinkedIn',indeed:'Indeed',glassdoor:'Glassdoor'};
-const DEFAULT_PACE={linkedin_apply_seconds:4,concurrency:2,confirm_timeout:45,fast_prepare_seconds:12};
+const DEFAULT_PACE={linkedin_apply_seconds:4,concurrency:2,confirm_timeout:45,fast_prepare_seconds:60};
 export async function createPortal({root=ROOT,directory=process.env.APPLYBURST_DATA||join(root,'.data/portal'),base='/applyburst',publicOrigin=process.env.APPLYBURST_PUBLIC_ORIGIN||'https://tapsubmit.com',seed=true,automaticRefresh=seed,mode=process.env.APPLYBURST_MODE||'local',provisionAdmin=false}={}){
  mkdirSync(directory,{recursive:true});let browserRun=null,desktopTicket=process.env.APPLYBURST_DESKTOP_TICKET||null,automation=null,automationMonitor=null,assistant=null,telegram=null,preferenceEditor=null;
  // Production local installs register their owner. Public website allows member registration.
@@ -100,11 +100,11 @@ export async function createPortal({root=ROOT,directory=process.env.APPLYBURST_D
   if(perm.mode==='review'||perm.paused||!app||app.state!=='ready_to_submit'||!app.plan_hash||!job)return false;
   // Loopback fixture jobs stand in for a real family only in local end-to-end runs.
   const route=applyRoute(job),fixture=job.fixture_family&&/^http:\/\/127\.0\.0\.1:/.test(applyTarget(job)),family=fixture?job.fixture_family:route.family;if(!(canPrepare(job)||fixture)||!perm.sites[family])return false;
-  const allowed=perm.mode==='auto_all'?new Set(['resume','approved_answer','derived_from_phone','user_preference','site_prefilled']):new Set(['resume','approved_answer','derived_from_phone','user_preference']);
+  const allowed=perm.mode==='auto_all'?new Set(['resume','approved_answer','derived_from_phone','derived_from_location','user_preference','site_prefilled']):new Set(['resume','approved_answer','derived_from_phone','derived_from_location','user_preference']);
   return(app.detail.disclosure||[]).every(row=>allowed.has(row.source));
  }
  function autoSubmitAfter(run){
-  const perm=permissions();if(perm.mode==='review'||perm.paused||run.task!=='prepare')return;
+  const perm=permissions();if(perm.mode==='review'||perm.paused||run.task!=='prepare'||run.auto_submit_after===false)return;
   const room=Math.max(0,perm.daily_cap-submittedToday());if(!room)return;
   const ids=run.order.filter(id=>{const app=applications.get(id),job=store.getJob(id);return autoEligible(app,job,perm)&&!applications.blocker(id,applyTarget(job))?.state;}).slice(0,room);
   if(!ids.length)return;
@@ -167,7 +167,7 @@ export async function createPortal({root=ROOT,directory=process.env.APPLYBURST_D
  function browserSummary(){if(!browserRun)return null;const {worker,events,review,frame,...run}=browserRun;run.frame_seq=frame?.seq||0;return{...run,events:events.slice(-40),jobs:run.order.map(id=>{const job=store.getJob(id);return{id,title:job?.title||id,company:job?.company||'',state:applications.get(id)?.state||'queued'};})};}
  function startBrowser(task,{jobs=[],review=null,site=null,options={}}={}){
   if(browserRun?.running||discovery.usingBrowser)throw new Error(browserRun?.task==='login'?'Finish signing in, then close the separate Chrome sign-in window. Your connection will be saved automatically.':'The browser is running another task. Wait for it to finish, or stop that run.');
-  const run={id:randomUUID(),task,site,running:true,started_at:Date.now(),events:[],order:jobs.map(job=>job.id),review,needs_human:null,waiting:null,counts:null,error:null,revisions:revisions()};
+  const run={id:randomUUID(),task,site,running:true,auto_submit_after:options.auto_submit_after!==false,started_at:Date.now(),events:[],order:jobs.map(job=>job.id),review,needs_human:null,waiting:null,counts:null,error:null,revisions:revisions()};
   // Browser work runs headless and is shown through the live view, unless windows on the PC are switched on.
   const input={task,site,browser_profile:profileDir,jobs,profile:candidate(),answers:store.setting('answer_bank')||{},scoped_answers:store.setting('scoped_answers')||{},preferences:store.setting('user_preferences')||{},permission:permissions(),search_policy:store.setting('search_policy')||{},headless:task==='live'||(process.env.APPLYBURST_HEADLESS==='1'||!store.setting('show_browser_windows'))&&task!=='login',concurrency:pace().concurrency,fast_prepare_seconds:pace().fast_prepare_seconds||12,linkedin_pace_seconds:pace().linkedin_apply_seconds,indeed_pace_seconds:2,confirm_timeout:pace().confirm_timeout,human_timeout:600,...options};
   // Authenticated native Apply flows use the ordinary installed browser window.
@@ -479,8 +479,8 @@ export async function createPortal({root=ROOT,directory=process.env.APPLYBURST_D
      const jobs=prepareJobs([id]);
      const taskMode=auto_submit?'auto':'prepare';
      let run=browserRun;
-     if(browserRun?.running&&browserRun.task===taskMode){browserRun.order.push(id);browserRun.worker.send({type:'add_jobs',jobs});}
-     else run=startBrowser(taskMode,{jobs,options:{headless:true,watch_seconds:0,human_timeout:2}});
+     if(browserRun?.running&&browserRun.task===taskMode){if(taskMode==='prepare')browserRun.auto_submit_after=false;browserRun.order.push(id);browserRun.worker.send({type:'add_jobs',jobs});}
+     else run=startBrowser(taskMode,{jobs,options:{headless:true,watch_seconds:0,human_timeout:2,auto_submit_after:false}});
      if(run?.worker?.done)await Promise.race([run.worker.done,new Promise(r=>setTimeout(r,15000))]);
      const finalApp=applications.get(id),fields=Array.isArray(finalApp?.detail?.disclosure)?finalApp.detail.disclosure:(finalApp?.detail?.disclosure?.fields||[]);
      send(200,{ok:true,job_id:id,state:finalApp?.state||'preparing',detail:finalApp?.detail?{...finalApp.detail,disclosure:{fields}}:{}});return;}

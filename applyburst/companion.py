@@ -334,7 +334,8 @@ def summarise_steps(steps):
 
 async def execute(page, job, request, emit, mode):
     """Bound the automatic preparation lane; final clicks have a separate confirmation budget."""
-    budget = max(3, min(60, float(request.get('fast_prepare_seconds', 12)))) if mode == 'auto' else None
+    budget = (max(3, min(120, float(request.get('fast_prepare_seconds', 60)))) if mode == 'auto'
+              else max(15, min(600, float(request.get('prepare_timeout_seconds', 180)))) if mode == 'prepare' else None)
     tick = time.perf_counter()
     try:
         async with asyncio.timeout(budget) as deadline:
@@ -343,7 +344,7 @@ async def execute(page, job, request, emit, mode):
         adapter = adapter_for(job['url'], job.get('family'))
         return {'job_id': job['id'], 'family': adapter.family, 'url': job['url'], 'mode': mode,
                 'state': 'deferred_slow', 'elapsed_ms': round((time.perf_counter()-tick)*1000, 1),
-                'note': 'Preparation exceeded the fast-lane budget. No final click; review or retry this job separately.'}
+                'note': 'Preparation exceeded its time budget. No final click; review or retry this job separately.'}
 
 
 async def location_policy_blocker(page, job, request, mode='auto'):
@@ -400,7 +401,7 @@ async def _execute(page, job, request, emit, mode, deadline):
             return done({'state': 'failed_before_submit', 'error': 'Could not open the page: ' + str(error).splitlines()[0][:200]})
         landed = adapter_for(page.url)
         if mode != 'inspect':
-            mismatch = await location_policy_blocker(page, job, request)
+            mismatch = await location_policy_blocker(page, job, request, mode)
             if mismatch:
                 return done(mismatch)
         if landed is not GENERIC and landed.family != family:
